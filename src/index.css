@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+    .no-scrollbar {
+      overflow-y: auto; /* Enable vertical scrolling */
+      scrollbar-width: none; /* Firefox: Hide scrollbar */
+    }
+  
+    .no-scrollbar::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Edge: Hide scrollbar */
+    }
+  }
