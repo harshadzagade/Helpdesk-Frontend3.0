@@ -519,41 +519,61 @@ const Complaint = () => {
         <ComplaintDetails complaint={selectedComplaint} onClose={handleBack} />
       ) : (
         <>
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center space-x-4">
+          <div className="mb-4 space-y-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
               {/* View selector */}
-              <div className="flex flex-col">
-                {complaintViewOptions.length > 1 ? (
-                  <Select
-                    options={complaintViewOptions}
-                    value={complaintViewOptions.find(opt => opt.value === complaintView) || complaintViewOptions[0]}
-                    onChange={handleComplaintViewChange}
-                    placeholder="Filter Complaints"
-                    className="w-48 inline-block mr-4"
-                    isClearable={false}
-                  />
-                ) : (
-                  <span className="text-sm font-semibold">
-                    {complaintViewOptions[0]?.label || 'Complaints'}
-                  </span>
-                )}
+                <div className="flex flex-col">
+                  {complaintViewOptions.length > 1 ? (
+                    <Select
+                      options={complaintViewOptions}
+                      value={complaintViewOptions.find(opt => opt.value === complaintView) || complaintViewOptions[0]}
+                      onChange={handleComplaintViewChange}
+                      placeholder="Filter Complaints"
+                      className="w-full md:w-56"
+                      isClearable={false}
+                    />
+                  ) : (
+                    <span className="text-sm font-semibold">
+                      {complaintViewOptions[0]?.label || 'Complaints'}
+                    </span>
+                  )}
+                </div>
+
+                <Searchbar value={searchTerm} onChange={handleSearchChange} onClear={handleClearSearch} />
+
+                <button
+                  onClick={() => setIsFilterVisible(!isFilterVisible)}
+                  className={`w-full rounded px-4 py-2 text-sm font-bold transition-colors md:w-auto ${isFilterVisible
+                    ? 'bg-brand-secondary text-white hover:bg-brand-secondary-200'
+                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                    }`}
+                >
+                  {isFilterVisible ? 'Hide Filters' : 'Show Filters'}
+                </button>
               </div>
 
-              <Searchbar value={searchTerm} onChange={handleSearchChange} onClear={handleClearSearch} />
+              {/* superadmin hide add complaint */}
+              {!isSuperadmin && (
+                <button
+                  onClick={() => setIsFormVisible(!isFormVisible)}
+                  className="w-full rounded bg-brand-secondary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-brand-secondary-200 md:w-auto"
+                >
+                  {isFormVisible ? 'Close Form' : 'Add Complaint'}
+                </button>
+              )}
+            </div>
 
-              <button
-                onClick={() => setIsFilterVisible(!isFilterVisible)}
-                className={`px-4 py-2 text-sm font-bold rounded transition-colors ${isFilterVisible
-                  ? 'bg-brand-secondary text-white hover:bg-brand-secondary-200'
-                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                  }`}
-              >
-                {isFilterVisible ? 'Hide Filters' : 'Show Filters'}
-              </button>
+            {isFilterVisible && (
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="mb-3">
+                  <h2 className="text-sm font-semibold text-gray-800">Filter Complaints</h2>
+                  <p className="text-xs text-gray-500">Use these options to narrow the complaint list.</p>
+                </div>
 
-              {isFilterVisible && (
-                <div className="flex space-x-4">
-                  <div className="flex flex-col">
+                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium text-gray-600">Department</span>
                     <Select
                       name="department"
                       options={departmentNameOptions}
@@ -562,9 +582,10 @@ const Complaint = () => {
                       placeholder="Select Department"
                       isClearable
                     />
-                  </div>
+                  </label>
 
-                  <div className="flex flex-col">
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium text-gray-600">Complaint Type</span>
                     <Select
                       name="complaint_type"
                       options={categoryOptionsForFilter}
@@ -574,9 +595,10 @@ const Complaint = () => {
                       isDisabled={!selectedDeptFilter}
                       isClearable
                     />
-                  </div>
+                  </label>
 
-                  <div className="flex flex-col">
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium text-gray-600">Status</span>
                     <Select
                       name="status"
                       options={uniqueStatuses}
@@ -585,26 +607,18 @@ const Complaint = () => {
                       placeholder="Select Status"
                       isClearable
                     />
+                  </label>
+
+                  <div className="flex items-end">
+                    <button
+                      onClick={clearFilters}
+                      className="w-full rounded bg-red-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600"
+                    >
+                      Clear Filters
+                    </button>
                   </div>
-
-                  <button
-                    onClick={clearFilters}
-                    className="px-4 py-2 text-sm font-bold bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-                  >
-                    Clear Filters
-                  </button>
                 </div>
-              )}
-            </div>
-
-            {/* superadmin hide add complaint */}
-            {!isSuperadmin && (
-              <button
-                onClick={() => setIsFormVisible(!isFormVisible)}
-                className="px-4 py-2 text-sm font-bold bg-brand-secondary text-white rounded hover:bg-brand-secondary-200 transition-colors"
-              >
-                {isFormVisible ? 'Close Form' : 'Add Complaint'}
-              </button>
+              </div>
             )}
           </div>
 

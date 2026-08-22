@@ -1,10 +1,10 @@
 // src/pages/Employee.jsx
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Select from 'react-select';
 import Table from '../components/Table';
 import Searchbar from '../components/Searchbar';
 import FormInput from '../components/FormInput';
-import EmployeeDetails from './EmployeeDetails';
+import EmployeeDetails from './EmployeeDetailsV2';
 import api from '../lib/api';
 import { useAuth } from '../context/authContext/AuthContext';
 import Swal from 'sweetalert2';
@@ -47,7 +47,7 @@ const normalizeIntArray = (v) => {
 
 const Employee = () => {
   // NOTE: many auth contexts expose `user` (or `authUser`). If your context uses different name, change here.
- const { hasRole, activeDepartmentId } = useAuth();
+ const { hasRole, activeDepartmentId, canManageExtensions } = useAuth();
 
   const isSuperadmin = hasRole('superadmin');
   const isAdmin = hasRole('admin');
@@ -55,6 +55,7 @@ const Employee = () => {
   const canViewRole = isSuperadmin || isAdmin;
   const canManage = isSuperadmin; // only superadmin can create/update/delete
   const canChangeRole = isAdmin || isSuperadmin; // both can change role, but admins have restrictions in onChangeRole handler
+  const canEditExtension = isSuperadmin || canManageExtensions;
 
   const activeDeptId = activeDepartmentId != null ? Number(activeDepartmentId) : null;
 
@@ -67,6 +68,7 @@ const Employee = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const employeeFormRef = useRef(null);
 
   // data
   const [staff, setStaff] = useState([]);
@@ -160,11 +162,24 @@ const Employee = () => {
     setLoading(true);
     setError('');
     try {
-      const endpoint =
+      const endpoints =
         viewMode === 'archived'
-          ? '/api/staffArchive/archiveStaff'
-          : '/api/staff';
-      const res = await api.get(endpoint);
+          ? ['/api/staffArchive/archiveStaff', '/api/staffArchive/archivedStaff', '/api/staffArchive']
+          : ['/api/staff'];
+
+      let res = null;
+      let lastError = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          res = await api.get(endpoint);
+          break;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      if (!res) throw lastError || new Error('Failed to load staff');
 
       let staffRows = [];
       if (Array.isArray(res.data?.data)) staffRows = res.data.data;
@@ -316,6 +331,25 @@ const Employee = () => {
 
   if (canViewRole) columns.push({ key: 'role', label: 'Role' });
 
+  if (isSuperadmin) {
+    columns.push(
+      {
+        key: 'canManageExtensions',
+        label: 'Extension Access',
+        render: (row) => (
+          row.canManageExtensions || row.canUpdateExtensions ? 'Allowed' : 'No'
+        ),
+      },
+      {
+        key: 'canManagePolicies',
+        label: 'Policy Access',
+        render: (row) => (
+          row.canManagePolicies || row.canUploadPolicies ? 'Allowed' : 'No'
+        ),
+      },
+    );
+  }
+
   columns.push(
     {
       key: 'phoneNumber',
@@ -338,6 +372,118 @@ const Employee = () => {
 
     const targetDeptIds = normalizeIntArray(row?.departmentIds);
     return targetDeptIds.includes(activeDeptId);
+  };
+
+  const onUpdateExtension = async (row) => {
+    if (!canEditExtension) {
+      Swal.fire({ icon: 'warning', title: 'Not allowed', text: 'You do not have permission to update extension numbers.' });
+      return;
+    }
+    if (viewMode !== 'active' && viewMode !== 'myDepartment') {
+      Swal.fire({ icon: 'info', title: 'Read only', text: 'Extension update is only available for active employees.' });
+      return;
+    }
+
+    const currentValue = toStr(row.contactExtension);
+    const { value: nextExtension } = await Swal.fire({
+      title: `Update Extension: ${toStr(row.fullName)}`,
+      input: 'text',
+      inputValue: currentValue,
+      inputLabel: 'Extension Number',
+      inputPlaceholder: 'Enter extension number',
+      showCancelButton: true,
+      confirmButtonText: 'Update',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      inputValidator: (value) => {
+        const normalized = toStr(value).trim();
+        if (!normalized) return 'Please enter an extension number';
+        if (!/^\d+$/.test(normalized)) return 'Extension should contain only digits';
+        return undefined;
+      },
+    });
+
+    if (!nextExtension) return;
+
+    try {
+      setLoading(true);
+      Swal.fire({ title: 'Updating extension…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      await api.patch(`/api/staff/${row.id}/contact-extension`, {
+        contactExtension: toStr(nextExtension).trim(),
+      });
+      await Swal.fire({ icon: 'success', title: 'Updated', text: 'Extension number updated successfully.' });
+      fetchStaff();
+      setSelectedEmployee((prev) => (
+        prev && prev.id === row.id
+          ? { ...prev, contactExtension: toStr(nextExtension).trim() }
+          : prev
+      ));
+    } catch (e) {
+      const msg = e?.response?.data?.message || 'Extension update failed';
+      Swal.fire({ icon: 'error', title: 'Update Failed', text: msg });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onManagePermissions = async (row) => {
+    if (!isSuperadmin) {
+      Swal.fire({ icon: 'warning', title: 'Not allowed', text: 'Only superadmin can manage staff permissions.' });
+      return;
+    }
+    if (viewMode !== 'active') {
+      Swal.fire({ icon: 'info', title: 'Read only', text: 'Permission updates are only available in active view.' });
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: `Permissions: ${toStr(row.fullName)}`,
+      html: `
+        <div class="text-left space-y-4">
+          <label style="display:flex;gap:8px;align-items:center;">
+            <input id="swal-can-manage-extensions" type="checkbox" ${(row.canManageExtensions || row.canUpdateExtensions) ? 'checked' : ''} />
+            <span>Can manage extension numbers</span>
+          </label>
+          <label style="display:flex;gap:8px;align-items:center;">
+            <input id="swal-can-manage-policies" type="checkbox" ${(row.canManagePolicies || row.canUploadPolicies) ? 'checked' : ''} />
+            <span>Can manage policies</span>
+          </label>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Save',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      focusConfirm: false,
+      preConfirm: () => ({
+        canManageExtensions: !!document.getElementById('swal-can-manage-extensions')?.checked,
+        canManagePolicies: !!document.getElementById('swal-can-manage-policies')?.checked,
+      }),
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setLoading(true);
+      Swal.fire({ title: 'Saving permissions…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const payload = {
+        canManageExtensions: !!result.value.canManageExtensions,
+        canManagePolicies: !!result.value.canManagePolicies,
+      };
+      await api.patch(`/api/staff/permissions/${row.id}`, payload);
+      await Swal.fire({ icon: 'success', title: 'Updated', text: 'Staff permissions updated successfully.' });
+      fetchStaff();
+      setSelectedEmployee((prev) => (
+        prev && prev.id === row.id
+          ? { ...prev, ...payload }
+          : prev
+      ));
+    } catch (e) {
+      const msg = e?.response?.data?.message || 'Permission update failed';
+      Swal.fire({ icon: 'error', title: 'Update Failed', text: msg });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ✅ NEW: Change Role (Admin scoped endpoint)
@@ -463,6 +609,9 @@ const Employee = () => {
 
     setIsEditing(true);
     setIsFormVisible(true);
+    setTimeout(() => {
+      employeeFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
   };
 
   // Delete
@@ -599,6 +748,23 @@ const Employee = () => {
           }
           return false;
         },
+      });
+    }
+
+    if (canEditExtension && (viewMode === 'active' || viewMode === 'myDepartment')) {
+      list.push({
+        label: 'Update Extension',
+        onClick: onUpdateExtension,
+        className: 'bg-teal-700 hover:bg-teal-600',
+      });
+    }
+
+    if (isSuperadmin && viewMode === 'active') {
+      list.push({
+        label: 'Permissions',
+        onClick: onManagePermissions,
+        className: 'bg-amber-700 hover:bg-amber-600',
+        disabled: (row) => isSuper(row.role),
       });
     }
 
@@ -871,7 +1037,7 @@ const Employee = () => {
                         : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                         }`}
                     >
-                      {viewMode === 'archived' ? 'View Active' : 'View Archive'}
+                      {viewMode === 'archived' ? 'Active Employees' : 'Archived Employees'}
                     </button>
                   )}
                 </div>
@@ -892,7 +1058,7 @@ const Employee = () => {
           </div>
 
           {isFormVisible && viewMode === 'active' && (
-            <div className="p-4 border bg-white border-gray-300 rounded shadow mb-4">
+            <div ref={employeeFormRef} className="p-4 border bg-white border-gray-300 rounded shadow mb-4 scroll-mt-24">
               {!canManage && (
                 <div className="mb-3 text-sm text-orange-700 bg-orange-50 p-2 rounded">
                   Only superadmin can submit changes. You’re in read-only mode.

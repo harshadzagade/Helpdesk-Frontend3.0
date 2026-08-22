@@ -13,11 +13,14 @@ function Table({ columns, data, actions, expandable, onRowClick }) {
     let result = [...data];
 
     if (sortConfig.key) {
+      const sortColumn = columns.find((column) => column.key === sortConfig.key);
+      const sortKey = sortColumn?.valueKey || sortConfig.key;
+
       result.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
+        if (a[sortKey] < b[sortKey]) {
           return sortConfig.direction === 'asc' ? -1 : 1;
         }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
+        if (a[sortKey] > b[sortKey]) {
           return sortConfig.direction === 'asc' ? 1 : -1;
         }
         return 0;
@@ -25,7 +28,7 @@ function Table({ columns, data, actions, expandable, onRowClick }) {
     }
 
     return result;
-  }, [data, sortConfig]);
+  }, [columns, data, sortConfig]);
 
   const totalItems = filteredData.length;
   const totalPages = Math.ceil(totalItems / pageSize);
@@ -59,8 +62,9 @@ function Table({ columns, data, actions, expandable, onRowClick }) {
   };
 
   return (
-    <div className="overflow-x-auto font-sans">
-      <table className="min-w-full bg-white shadow-md rounded-lg ">
+    <div className="font-sans w-full max-w-full min-w-0">
+      <div className="w-full max-w-full min-w-0 overflow-x-auto">
+        <table className="w-full min-w-max bg-white shadow-md rounded-lg">
         <thead className="bg-gray-300 text-gray-900">
           <tr>
             {columns.map((column) => (
@@ -104,26 +108,39 @@ function Table({ columns, data, actions, expandable, onRowClick }) {
                 >
                   {columns.map((column) => (
                     <td key={column.key} className="px-6 py-4 text-sm text-gray-900">
-                      {column.format ? column.format(row[column.key]) : (row[column.key] || '-')}
+                      {column.format
+                        ? column.format(row[column.valueKey || column.key], row)
+                        : (row[column.valueKey || column.key] || '-')}
                     </td>
                   ))}
                   {showActions && (
-                    <td className="px-6 py-4 text-sm">
-                      <div className="flex space-x-2">
+                    <td className="px-4 py-4 text-sm align-top min-w-[180px]">
+                      <div className="flex flex-wrap gap-2">
                         {actions.map((action) => (
                           action.render ? (
                             <div key={action.label}>{action.render(row)}</div>
                           ) : (
-                            <button
-                              key={action.label}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                action.onClick(row);
-                              }}
-                              className={`px-3 py-1 rounded-md text-white ${action.className}`}
-                            >
-                              {action.label}
-                            </button>
+                            (() => {
+                              const isDisabled =
+                                typeof action.disabled === 'function'
+                                  ? action.disabled(row)
+                                  : !!action.disabled;
+
+                              return (
+                                <button
+                                  key={action.label}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isDisabled) return;
+                                    action.onClick(row);
+                                  }}
+                                  disabled={isDisabled}
+                                  className={`px-2.5 py-1.5 rounded-md text-xs font-semibold text-white whitespace-nowrap ${action.className} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                  {action.label}
+                                </button>
+                              );
+                            })()
                           )
                         ))}
                       </div>
@@ -142,12 +159,13 @@ function Table({ columns, data, actions, expandable, onRowClick }) {
             ))
           )}
         </tbody>
-      </table>
+        </table>
+      </div>
 
       {/* Pagination Controls */}
       {totalItems > 0 && (
-        <div className="flex justify-between items-center mt-4 px-6 py-3  rounded-lg">
-          <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap justify-between items-center gap-3 mt-4 px-2 sm:px-6 py-3 rounded-lg">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-gray-700">
               Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} entries
             </span>
@@ -163,7 +181,7 @@ function Table({ columns, data, actions, expandable, onRowClick }) {
               ))}
             </select>
           </div>
-          <div className="flex space-x-1">
+          <div className="flex flex-wrap gap-1">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
@@ -207,6 +225,7 @@ Table.propTypes = {
   columns: PropTypes.arrayOf(
     PropTypes.shape({
       key: PropTypes.string.isRequired,
+      valueKey: PropTypes.string,
       label: PropTypes.string.isRequired,
       format: PropTypes.func,
     })
@@ -218,6 +237,7 @@ Table.propTypes = {
       onClick: PropTypes.func.isRequired,
       className: PropTypes.string,
       render: PropTypes.func,
+      disabled: PropTypes.oneOfType([PropTypes.bool, PropTypes.func]),
     })
   ),
   expandable: PropTypes.shape({

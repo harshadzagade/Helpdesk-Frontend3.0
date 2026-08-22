@@ -25,25 +25,18 @@ export default function SuperAdminDashboard() {
     return { from: fmt(from), to: fmt(to) };
   });
 
-  // ✅ new filters
-  const [deptId, setDeptId] = useState(""); // "" = all
-  const [ticketType, setTicketType] = useState("all"); // all|complaint|request
-
-  // ✅ dept dropdown list
+  const [deptId, setDeptId] = useState("");
+  const [ticketType, setTicketType] = useState("all");
   const [departments, setDepartments] = useState([]);
-
-  // ✅ sorting for department summary table
-  const [sortKey, setSortKey] = useState("total"); // department|type|total|complaints|requests
+  const [sortKey, setSortKey] = useState("total");
   const [sortDir, setSortDir] = useState("desc");
-
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // load departments for dropdown
   useEffect(() => {
     const loadDepts = async () => {
       try {
-        const res = await api.get("/api/departments"); // you already have this route
+        const res = await api.get("/api/departments");
         const list = Array.isArray(res.data) ? res.data : (res.data.data || []);
         setDepartments(list);
       } catch (e) {
@@ -95,7 +88,6 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* header + filters */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
@@ -103,7 +95,6 @@ export default function SuperAdminDashboard() {
         </div>
 
         <div className="flex flex-col md:flex-row gap-3">
-          {/* ✅ Ticket Type filter */}
           <select
             value={ticketType}
             onChange={(e) => setTicketType(e.target.value)}
@@ -114,7 +105,6 @@ export default function SuperAdminDashboard() {
             <option value="request">Requests</option>
           </select>
 
-          {/* ✅ Department filter */}
           <select
             value={deptId}
             onChange={(e) => setDeptId(e.target.value)}
@@ -130,7 +120,6 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
-      {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <StatCard title="Pending" value={data.pending} />
         <StatCard title="In Progress" value={data.inProgress} />
@@ -139,11 +128,9 @@ export default function SuperAdminDashboard() {
         <StatCard title="Total" value={data.total} />
       </div>
 
-      {/* Trend + Recent */}
       <TrendChart data={data.trend || []} />
       <TicketTable rows={data.recentTickets || []} />
 
-      {/* ✅ Department-wise summary table + sorting */}
       <div className="rounded-2xl bg-white shadow border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-semibold">Department-wise Summary</h3>
@@ -156,34 +143,19 @@ export default function SuperAdminDashboard() {
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 text-gray-600">
               <tr>
-                <th
-                  className="text-left px-4 py-3 cursor-pointer select-none"
-                  onClick={() => toggleSort("department")}
-                >
+                <th className="text-left px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("department")}>
                   Department
                 </th>
-                <th
-                  className="text-left px-4 py-3 cursor-pointer select-none"
-                  onClick={() => toggleSort("type")}
-                >
+                <th className="text-left px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("type")}>
                   Dept Type
                 </th>
-                <th
-                  className="text-left px-4 py-3 cursor-pointer select-none"
-                  onClick={() => toggleSort("total")}
-                >
+                <th className="text-left px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("total")}>
                   Total
                 </th>
-                <th
-                  className="text-left px-4 py-3 cursor-pointer select-none"
-                  onClick={() => toggleSort("complaints")}
-                >
+                <th className="text-left px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("complaints")}>
                   Complaints
                 </th>
-                <th
-                  className="text-left px-4 py-3 cursor-pointer select-none"
-                  onClick={() => toggleSort("requests")}
-                >
+                <th className="text-left px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("requests")}>
                   Requests
                 </th>
               </tr>

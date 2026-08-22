@@ -914,9 +914,6 @@ const ComplaintDetails = ({ complaint: initialComplaint, onClose }) => {
           <p className="text-sm font-medium text-gray-700">
             System Generated on: {new Date().toLocaleString('en-IN')}
           </p>
-          <p className="text-base font-bold text-gray-800 mt-4">
-            This is a digitally generated document • No signature required
-          </p>
         </div>
       </div>
 

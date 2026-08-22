@@ -9,6 +9,12 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(() => localStorage.getItem("auth.role"));
   const [name, setName] = useState(() => localStorage.getItem("auth.name"));
   const [email, setEmail] = useState(() => localStorage.getItem("auth.email"));
+  const [canManageExtensions, setCanManageExtensions] = useState(
+    () => localStorage.getItem("auth.canManageExtensions") === "true"
+  );
+  const [canManagePolicies, setCanManagePolicies] = useState(
+    () => localStorage.getItem("auth.canManagePolicies") === "true"
+  );
 
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem("auth.user");
@@ -72,6 +78,9 @@ export function AuthProvider({ children }) {
     if (email) localStorage.setItem("auth.email", email);
     else localStorage.removeItem("auth.email");
 
+    localStorage.setItem("auth.canManageExtensions", String(!!canManageExtensions));
+    localStorage.setItem("auth.canManagePolicies", String(!!canManagePolicies));
+
     if (user) localStorage.setItem("auth.user", JSON.stringify(user));
     else localStorage.removeItem("auth.user");
 
@@ -80,7 +89,18 @@ export function AuthProvider({ children }) {
 
     if (activeDepartmentId) localStorage.setItem("auth.activeDepartmentId", String(activeDepartmentId));
     else localStorage.removeItem("auth.activeDepartmentId");
-  }, [token, role, name, email, user, departmentIds, departments, activeDepartmentId]);
+  }, [
+    token,
+    role,
+    name,
+    email,
+    canManageExtensions,
+    canManagePolicies,
+    user,
+    departmentIds,
+    departments,
+    activeDepartmentId,
+  ]);
 
   // ✅ OPTIONAL: On page refresh, if we have departmentIds but departments empty -> refetch
   useEffect(() => {
@@ -98,12 +118,16 @@ export function AuthProvider({ children }) {
       setRole(res.data.role);
       setName(res.data.name);
       setEmail(res.data.email);
+      setCanManageExtensions(!!res.data.canManageExtensions);
+      setCanManagePolicies(!!res.data.canManagePolicies);
 
       setUser({
         id: res.data.id,
         email: res.data.email,
         name: res.data.name,
         role: res.data.role,
+        canManageExtensions: !!res.data.canManageExtensions,
+        canManagePolicies: !!res.data.canManagePolicies,
       });
 
       const deptIds = res.data.departmentIds || [];
@@ -133,6 +157,8 @@ export function AuthProvider({ children }) {
     setRole(null);
     setName(null);
     setEmail(null);
+    setCanManageExtensions(false);
+    setCanManagePolicies(false);
     setUser(null);
 
     setDepartmentIds([]);
@@ -143,6 +169,8 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("auth.role");
     localStorage.removeItem("auth.name");
     localStorage.removeItem("auth.email");
+    localStorage.removeItem("auth.canManageExtensions");
+    localStorage.removeItem("auth.canManagePolicies");
     localStorage.removeItem("auth.user");
     localStorage.removeItem("auth.departmentIds");
     localStorage.removeItem("auth.departments");
@@ -165,6 +193,8 @@ export function AuthProvider({ children }) {
       role,
       name,
       email,
+      canManageExtensions,
+      canManagePolicies,
       user,
       isAuthenticated,
       loading,
@@ -184,6 +214,8 @@ export function AuthProvider({ children }) {
       setRole,
       setName,
       setEmail,
+      setCanManageExtensions,
+      setCanManagePolicies,
       setUser,
       setDepartmentIds,
       setDepartments,
@@ -194,6 +226,8 @@ export function AuthProvider({ children }) {
       role,
       name,
       email,
+      canManageExtensions,
+      canManagePolicies,
       user,
       isAuthenticated,
       loading,

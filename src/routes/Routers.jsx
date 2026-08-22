@@ -13,7 +13,8 @@ import Complaint from "../pages/Complaint";
 import Request from "../pages/Request";
 import ContactList from "../pages/ContactList";
 import Report from "../pages/Report";
-import Policies from "../pages/Policies";
+import Policies from "../pages/PoliciesV2";
+import ReminderManagement from "../pages/ReminderManagement";
 import SubadminActivity from "../pages/subadminActivity";
 import ComplaintDetailsPage from "../pages/ComplaintDetailsPage";
 import RequestDetailsPage from "../pages/RequestDetailsPage";
@@ -56,6 +57,7 @@ export default function Routers() {
               <Route path="/department" element={<Department />} />
               <Route path="/institute" element={<Institute />} />
               <Route path="/contact-list" element={<ContactList />} />
+              <Route path="/reminders" element={<ReminderManagement />} />
             </Route>
           </Route>
         </Route>

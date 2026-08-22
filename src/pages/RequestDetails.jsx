@@ -302,6 +302,10 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
     isAdminOrSubadmin && request && !isBlocked && (isHod1Phase || isHod2Phase);
 
   const statusBadge = getStatusBadge(request?.status);
+  const requesterDeptLabel = idsToNames(requesterDeptIds).length
+    ? idsToNames(requesterDeptIds).join(', ')
+    : 'Requester Department';
+  const targetDeptLabel = targetDeptName || (request?.departmentId ? `Department ID: ${request.departmentId}` : 'Target Department');
 
   const hod1ApprovedByStaff =
     request?.hod1ApprovedById && Array.isArray(allStaff)
@@ -603,9 +607,8 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
     const raisedDate = new Date(request.createdAt);
 
     const requesterDeptNames = idsToNames(getStaffDepartmentIds(requesterStaff));
-    const hod1DeptNames = idsToNames(getStaffDepartmentIds(hod1ApprovedByStaff));
-    const hod2DeptNames = idsToNames(getStaffDepartmentIds(hod2ApprovedByStaff));
-
+    const hod1DeptLabel = requesterDeptNames.length ? requesterDeptNames.join(', ') : 'Requester Department';
+    const hod2DeptLabel = targetDeptName || (request.departmentId ? `Department ID: ${request.departmentId}` : 'Target Department');
     return (
       <div className="max-w-4xl mx-auto p-10 bg-white font-sans text-gray-800 text-sm leading-relaxed border border-gray-300 rounded-2xl [&_table_tr:first-child]:font-bold">
 
@@ -700,12 +703,17 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
         {request.hod1Approval && (
           <section className="mb-10">
             <h2 className="text-lg font-bold text-gray-900 mb-4 border-l-4 border-green-700 pl-4">
-              HOD Approval – {hod1DeptNames.length ? hod1DeptNames.join(', ') : 'HOD1'}
+              HOD1 Approval - Requester Department ({hod1DeptLabel})
             </h2>
 
             <table className="w-full border border-green-300 table-auto text-sm">
               <tbody className="divide-y divide-green-200">
                 <tr className="bg-green-50">
+                  <td className="px-5 py-3 text-gray-700">HOD Department</td>
+                  <td className="px-5 py-3 text-gray-900">{hod1DeptLabel}</td>
+                </tr>
+
+                <tr>
                   <td className="px-5 py-3 w-52 text-gray-700">Approved By</td>
                   <td className="px-5 py-3 text-gray-900">
                     {getFullName(hod1ApprovedByStaff)}{' '}
@@ -713,14 +721,14 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
                   </td>
                 </tr>
 
-                <tr>
+                <tr className="bg-green-50">
                   <td className="px-5 py-3 text-gray-700">Date &amp; Time</td>
                   <td className="px-5 py-3 text-gray-900">
                     {new Date(request.hod1ApprovedAt).toLocaleString('en-IN')}
                   </td>
                 </tr>
 
-                <tr className="bg-green-50">
+                <tr>
                   <td className="px-5 py-3 text-gray-700">Comment</td>
                   <td className="px-5 py-3 italic text-gray-900">{request.hod1Comment || 'Approved'}</td>
                 </tr>
@@ -732,12 +740,17 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
         {request.hod2Approval && (
           <section className="mb-10">
             <h2 className="text-lg font-bold text-gray-900 mb-4 border-l-4 border-green-700 pl-4">
-              Second HOD Approval – {hod2DeptNames.length ? hod2DeptNames.join(', ') : 'HOD2'}
+              HOD2 Approval - Target Department ({hod2DeptLabel})
             </h2>
 
             <table className="w-full border border-green-300 table-auto text-sm">
               <tbody className="divide-y divide-green-200">
                 <tr className="bg-green-50">
+                  <td className="px-5 py-3 text-gray-700">HOD Department</td>
+                  <td className="px-5 py-3 text-gray-900">{hod2DeptLabel}</td>
+                </tr>
+
+                <tr>
                   <td className="px-5 py-3 w-52 text-gray-700">Approved By</td>
                   <td className="px-5 py-3 text-gray-900">
                     {getFullName(hod2ApprovedByStaff)}{' '}
@@ -745,14 +758,14 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
                   </td>
                 </tr>
 
-                <tr>
+                <tr className="bg-green-50">
                   <td className="px-5 py-3 text-gray-700">Date &amp; Time</td>
                   <td className="px-5 py-3 text-gray-900">
                     {new Date(request.hod2ApprovedAt).toLocaleString('en-IN')}
                   </td>
                 </tr>
 
-                <tr className="bg-green-50">
+                <tr>
                   <td className="px-5 py-3 text-gray-700">Comment</td>
                   <td className="px-5 py-3 italic text-gray-900">{request.hod2Comment || 'Approved'}</td>
                 </tr>
@@ -761,12 +774,101 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
           </section>
         )}
 
+        {(request.assignStaffId ||
+          request.forwardToStaffId ||
+          request.problemDescription ||
+          request.actionTakenComment ||
+          request.resolvedAt) && (
+            <section className="mb-10">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 border-l-4 border-green-700 pl-4">
+                Assignment &amp; Resolution
+              </h2>
+
+              <table className="w-full border border-gray-300 table-auto text-sm">
+                <tbody className="divide-y divide-gray-200">
+                  {request.assignStaffId && (
+                    <tr className="bg-gray-50">
+                      <td className="px-5 py-3 font-semibold w-52 text-gray-700">
+                        Assigned To
+                      </td>
+                      <td className="px-5 py-3 text-gray-900">
+                        {assignedStaff
+                          ? getFullName(assignedStaff)
+                          : `Staff ID: ${request.assignStaffId}`}
+                        {assignedStaff?.role && (
+                          <span className="text-xs text-gray-600 ml-1">
+                            ({assignedStaff.role})
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+
+                  {request.forwardToStaffId && (
+                    <tr>
+                      <td className="px-5 py-3 font-semibold text-gray-700">
+                        Forwarded To
+                      </td>
+                      <td className="px-5 py-3 text-gray-900">
+                        {forwardedStaff
+                          ? `${getFullName(forwardedStaff)} (${forwardedStaff.email || 'No email'})`
+                          : `Staff ID: ${request.forwardToStaffId}`}
+
+                        {request.forwardComment && (
+                          <div className="mt-1 italic text-gray-800">
+                            Comment: {request.forwardComment}
+                          </div>
+                        )}
+
+                        {request.forwardAt && (
+                          <div className="mt-1 text-xs text-gray-500">
+                            Forwarded at: {new Date(request.forwardAt).toLocaleString('en-IN')}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+
+                  {request.problemDescription && (
+                    <tr className="bg-gray-50">
+                      <td className="px-5 py-3 font-semibold text-gray-700">
+                        Problem Description
+                      </td>
+                      <td className="px-5 py-3 text-gray-900">
+                        {request.problemDescription}
+                      </td>
+                    </tr>
+                  )}
+
+                  {request.actionTakenComment && (
+                    <tr>
+                      <td className="px-5 py-3 font-semibold text-gray-700">
+                        Action Taken
+                      </td>
+                      <td className="px-5 py-3 text-gray-900">
+                        {request.actionTakenComment}
+                      </td>
+                    </tr>
+                  )}
+
+                  {request.resolvedAt && (
+                    <tr className="bg-gray-50">
+                      <td className="px-5 py-3 font-semibold text-gray-700">
+                        Resolved At
+                      </td>
+                      <td className="px-5 py-3 text-gray-900">
+                        {new Date(request.resolvedAt).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </section>
+          )}
+
         <div className="mt-16 pt-8 border-t-2 border-dashed border-gray-500 text-center">
           <p className="text-sm font-medium text-gray-700">
             System Generated on: {new Date().toLocaleString('en-IN')}
-          </p>
-          <p className="text-base font-bold text-gray-800 mt-4">
-            This is a digitally generated document • No signature required
           </p>
         </div>
       </div>
@@ -942,8 +1044,13 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
 
       {request.hod1Approval && (
         <div className="mb-4">
-          <label className="font-medium text-gray-700 block mb-2">HOD1 Approval:</label>
+          <label className="font-medium text-gray-700 block mb-2">
+            HOD1 Approval - Requester Department ({requesterDeptLabel}):
+          </label>
           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-gray-800">
+            <p className="text-xs font-semibold text-indigo-700 mb-1">
+              HOD1 is the HOD/Admin of the request raised by user's department.
+            </p>
             <p className="font-semibold">
               Approved By: {hod1ApprovedByStaff ? getFullName(hod1ApprovedByStaff) : 'N/A'}
               {hod1ApprovedByStaff?.role && (
@@ -962,8 +1069,13 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
 
       {request.hod2Approval && (
         <div className="mb-4">
-          <label className="font-medium text-gray-700 block mb-2">HOD2 Approval:</label>
+          <label className="font-medium text-gray-700 block mb-2">
+            HOD2 Approval - Target Department ({targetDeptLabel}):
+          </label>
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-gray-800">
+            <p className="text-xs font-semibold text-purple-700 mb-1">
+              HOD2 is the HOD/Admin of the department where this request is sent.
+            </p>
             <p className="font-semibold">
               Approved By: {hod2ApprovedByStaff ? getFullName(hod2ApprovedByStaff) : 'N/A'}
               {hod2ApprovedByStaff?.role && (
@@ -1114,7 +1226,10 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
       {showHod1Modal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">HOD1 Approval</h2>
+            <h2 className="text-xl font-bold mb-1">HOD1 Approval</h2>
+            <p className="mb-4 text-sm text-gray-600">
+              Requester Department: {requesterDeptLabel}
+            </p>
             <form onSubmit={handleHod1Approve}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1157,7 +1272,10 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
       {showHod2Modal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">HOD2 Approval & Assign</h2>
+            <h2 className="text-xl font-bold mb-1">HOD2 Approval & Assign</h2>
+            <p className="mb-4 text-sm text-gray-600">
+              Target Department: {targetDeptLabel}
+            </p>
             <form onSubmit={handleHod2Approve}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1454,6 +1572,9 @@ RequestDetails.propTypes = {
     attachments: PropTypes.oneOfType([PropTypes.string, PropTypes.arrayOf(PropTypes.string)]),
     staffId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     assignStaffId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    assignedAt: PropTypes.string,
+    assignedById: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    closedById: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     hod1Approval: PropTypes.bool,
     hod1Comment: PropTypes.string,
     hod1ApprovedAt: PropTypes.string,

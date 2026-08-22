@@ -37,7 +37,7 @@ function Layout() {
       )}
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col lg:ml-64">
+      <div className="flex-1 min-w-0 flex flex-col lg:ml-64">
         {/* Navbar */}
         <header className="fixed top-0 left-0 right-0 lg:left-64 bg-white shadow-sm z-10">
           <Navbar onToggleSidebar={toggleSidebar} />
@@ -45,7 +45,7 @@ function Layout() {
         </header>
 
         {/* Main content */}
-        <main className="flex-1 mt-16 p-6 overflow-y-auto no-scrollbar">
+        <main className="flex-1 min-w-0 mt-16 p-6 overflow-x-hidden overflow-y-auto no-scrollbar">
           <Outlet />
         </main>
       </div>

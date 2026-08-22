@@ -586,41 +586,61 @@ const Request = () => {
         <RequestDetails request={selectedRequest} onClose={handleBack} />
       ) : (
         <>
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center space-x-4">
+          <div className="mb-4 space-y-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
               {/* ✅ Request view dropdown */}
-              <div className="flex flex-col">
-                {requestViewOptions.length > 1 ? (
-                  <Select
-                    options={requestViewOptions}
-                    value={requestViewOptions.find((opt) => opt.value === requestView) || requestViewOptions[0]}
-                    onChange={handleRequestViewChange}
-                    placeholder="Filter Requests"
-                    className="w-48 inline-block mr-4"
-                    isClearable={false}
-                  />
-                ) : (
-                  <span className="text-sm font-semibold">
-                    {requestViewOptions[0]?.label || "Requests"}
-                  </span>
-                )}
+                <div className="flex flex-col">
+                  {requestViewOptions.length > 1 ? (
+                    <Select
+                      options={requestViewOptions}
+                      value={requestViewOptions.find((opt) => opt.value === requestView) || requestViewOptions[0]}
+                      onChange={handleRequestViewChange}
+                      placeholder="Filter Requests"
+                      className="w-full md:w-56"
+                      isClearable={false}
+                    />
+                  ) : (
+                    <span className="text-sm font-semibold">
+                      {requestViewOptions[0]?.label || "Requests"}
+                    </span>
+                  )}
+                </div>
+
+                <Searchbar value={searchTerm} onChange={handleSearchChange} onClear={handleClearSearch} />
+
+                <button
+                  onClick={() => setIsFilterVisible(!isFilterVisible)}
+                  className={`w-full rounded px-4 py-2 text-sm font-bold transition-colors md:w-auto ${isFilterVisible
+                    ? "bg-brand-secondary text-white hover:bg-brand-secondary-200"
+                    : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                    }`}
+                >
+                  {isFilterVisible ? "Hide Filters" : "Show Filters"}
+                </button>
               </div>
 
-              <Searchbar value={searchTerm} onChange={handleSearchChange} onClear={handleClearSearch} />
+              {/* superadmin ko Add Request button nahi dikhayenge */}
+              {user?.role !== "superadmin" && (
+                <button
+                  onClick={() => setIsFormVisible(!isFormVisible)}
+                  className="w-full rounded bg-brand-secondary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-brand-secondary-200 md:w-auto"
+                >
+                  {isFormVisible ? "Close Form" : "Add Request"}
+                </button>
+              )}
+            </div>
 
-              <button
-                onClick={() => setIsFilterVisible(!isFilterVisible)}
-                className={`px-4 py-2 text-sm font-bold rounded transition-colors ${isFilterVisible
-                  ? "bg-brand-secondary text-white hover:bg-brand-secondary-200"
-                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                  }`}
-              >
-                {isFilterVisible ? "Hide Filters" : "Show Filters"}
-              </button>
+            {isFilterVisible && (
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="mb-3">
+                  <h2 className="text-sm font-semibold text-gray-800">Filter Requests</h2>
+                  <p className="text-xs text-gray-500">Use these options to narrow the request list.</p>
+                </div>
 
-              {isFilterVisible && (
-                <div className="flex space-x-4">
-                  <div className="flex flex-col">
+                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium text-gray-600">Department</span>
                     <Select
                       name="department"
                       options={departmentNameOptions}
@@ -629,8 +649,10 @@ const Request = () => {
                       placeholder="Select Department"
                       isClearable
                     />
-                  </div>
-                  <div className="flex flex-col">
+                  </label>
+
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium text-gray-600">Request Type</span>
                     <Select
                       name="requestType"
                       options={departmentCategoryOptions}
@@ -639,8 +661,10 @@ const Request = () => {
                       placeholder="Select Request Type"
                       isDisabled={!selectedDepartment}
                     />
-                  </div>
-                  <div className="flex flex-col">
+                  </label>
+
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium text-gray-600">Status</span>
                     <Select
                       name="status"
                       options={uniqueStatuses}
@@ -648,25 +672,18 @@ const Request = () => {
                       onChange={handleFilterChange}
                       placeholder="Select Status"
                     />
-                  </div>
-                  <button
-                    onClick={clearFilters}
-                    className="px-4 py-2 text-sm font-bold bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-                  >
-                    Clear Filters
-                  </button>
-                </div>
-              )}
-            </div>
+                  </label>
 
-            {/* superadmin ko Add Request button nahi dikhayenge */}
-            {user?.role !== "superadmin" && (
-              <button
-                onClick={() => setIsFormVisible(!isFormVisible)}
-                className="px-4 py-2 text-sm font-bold bg-brand-secondary text-white rounded hover:bg-brand-secondary-200 transition-colors"
-              >
-                {isFormVisible ? "Close Form" : "Add Request"}
-              </button>
+                  <div className="flex items-end">
+                    <button
+                      onClick={clearFilters}
+                      className="w-full rounded bg-red-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600"
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
