@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true, // Listen on all network interfaces'
-    allowedHosts: [ 'localhost']
+    allowedHosts: ['localhost', 'hello.met.edu']
   },
   plugins: [react()],
 })
