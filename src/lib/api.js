@@ -8,8 +8,32 @@ const api = axios.create({
   baseURL: BASE_URL,
 });
 
+const SESSION_EXPIRES_AT_KEY = "auth.expiresAt";
+const clearAuthStorage = () => {
+  [
+    "auth.token",
+    "auth.role",
+    "auth.name",
+    "auth.email",
+    "auth.canManageExtensions",
+    "auth.canManagePolicies",
+    "auth.user",
+    "auth.departmentIds",
+    "auth.departments",
+    "auth.activeDepartmentId",
+    SESSION_EXPIRES_AT_KEY,
+  ].forEach((key) => localStorage.removeItem(key));
+};
+
 // attach token automatically
 api.interceptors.request.use((config) => {
+  const expiresAt = Number(localStorage.getItem(SESSION_EXPIRES_AT_KEY));
+  if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+    clearAuthStorage();
+    window.dispatchEvent(new Event("auth:expired"));
+    return config;
+  }
+
   const token = localStorage.getItem("auth.token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
@@ -33,6 +57,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      clearAuthStorage();
+      window.dispatchEvent(new Event("auth:expired"));
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;

@@ -3,39 +3,61 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import api from "../../lib/api";
 
 const AuthContext = createContext(null);
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
+const SESSION_EXPIRES_AT_KEY = "auth.expiresAt";
+
+const getStoredJson = (key, fallback) => {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const isStoredSessionExpired = () => {
+  const expiresAt = Number(localStorage.getItem(SESSION_EXPIRES_AT_KEY));
+  return Number.isFinite(expiresAt) && expiresAt <= Date.now();
+};
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem("auth.token"));
-  const [role, setRole] = useState(() => localStorage.getItem("auth.role"));
-  const [name, setName] = useState(() => localStorage.getItem("auth.name"));
-  const [email, setEmail] = useState(() => localStorage.getItem("auth.email"));
+  const [token, setToken] = useState(() => (isStoredSessionExpired() ? null : localStorage.getItem("auth.token")));
+  const [role, setRole] = useState(() => (isStoredSessionExpired() ? null : localStorage.getItem("auth.role")));
+  const [name, setName] = useState(() => (isStoredSessionExpired() ? null : localStorage.getItem("auth.name")));
+  const [email, setEmail] = useState(() => (isStoredSessionExpired() ? null : localStorage.getItem("auth.email")));
   const [canManageExtensions, setCanManageExtensions] = useState(
-    () => localStorage.getItem("auth.canManageExtensions") === "true"
+    () => !isStoredSessionExpired() && localStorage.getItem("auth.canManageExtensions") === "true"
   );
   const [canManagePolicies, setCanManagePolicies] = useState(
-    () => localStorage.getItem("auth.canManagePolicies") === "true"
+    () => !isStoredSessionExpired() && localStorage.getItem("auth.canManagePolicies") === "true"
   );
 
   const [user, setUser] = useState(() => {
-    const storedUser = localStorage.getItem("auth.user");
-    return storedUser ? JSON.parse(storedUser) : null;
+    if (isStoredSessionExpired()) return null;
+    return getStoredJson("auth.user", null);
   });
 
   // ✅ departmentIds from login
   const [departmentIds, setDepartmentIds] = useState(() => {
-    const saved = localStorage.getItem("auth.departmentIds");
-    return saved ? JSON.parse(saved) : [];
+    if (isStoredSessionExpired()) return [];
+    return getStoredJson("auth.departmentIds", []);
   });
 
   // ✅ department objects from /api/departments (filtered)
   const [departments, setDepartments] = useState(() => {
-    const saved = localStorage.getItem("auth.departments");
-    return saved ? JSON.parse(saved) : [];
+    if (isStoredSessionExpired()) return [];
+    return getStoredJson("auth.departments", []);
   });
 
   // ✅ active dept (selected)
   const [activeDepartmentId, setActiveDepartmentId] = useState(() => {
+    if (isStoredSessionExpired()) return null;
     return localStorage.getItem("auth.activeDepartmentId") || null;
+  });
+  const [sessionExpiresAt, setSessionExpiresAt] = useState(() => {
+    if (isStoredSessionExpired()) return null;
+    const expiresAt = Number(localStorage.getItem(SESSION_EXPIRES_AT_KEY));
+    return Number.isFinite(expiresAt) ? expiresAt : null;
   });
 
   const [loading, setLoading] = useState(false);
@@ -89,6 +111,9 @@ export function AuthProvider({ children }) {
 
     if (activeDepartmentId) localStorage.setItem("auth.activeDepartmentId", String(activeDepartmentId));
     else localStorage.removeItem("auth.activeDepartmentId");
+
+    if (sessionExpiresAt) localStorage.setItem(SESSION_EXPIRES_AT_KEY, String(sessionExpiresAt));
+    else localStorage.removeItem(SESSION_EXPIRES_AT_KEY);
   }, [
     token,
     role,
@@ -100,6 +125,7 @@ export function AuthProvider({ children }) {
     departmentIds,
     departments,
     activeDepartmentId,
+    sessionExpiresAt,
   ]);
 
   // ✅ OPTIONAL: On page refresh, if we have departmentIds but departments empty -> refetch
@@ -115,6 +141,7 @@ export function AuthProvider({ children }) {
       const res = await api.post("/api/auth/login", { email: loginEmail, password });
 
       setToken(res.data.token);
+      setSessionExpiresAt(Date.now() + SESSION_DURATION_MS);
       setRole(res.data.role);
       setName(res.data.name);
       setEmail(res.data.email);
@@ -164,6 +191,7 @@ export function AuthProvider({ children }) {
     setDepartmentIds([]);
     setDepartments([]);
     setActiveDepartmentId(null);
+    setSessionExpiresAt(null);
 
     localStorage.removeItem("auth.token");
     localStorage.removeItem("auth.role");
@@ -175,7 +203,30 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("auth.departmentIds");
     localStorage.removeItem("auth.departments");
     localStorage.removeItem("auth.activeDepartmentId");
+    localStorage.removeItem(SESSION_EXPIRES_AT_KEY);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !sessionExpiresAt) return undefined;
+
+    const remainingMs = sessionExpiresAt - Date.now();
+    if (remainingMs <= 0) {
+      logout();
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      logout();
+    }, remainingMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isAuthenticated, logout, sessionExpiresAt]);
+
+  useEffect(() => {
+    const handleExpiredSession = () => logout();
+    window.addEventListener("auth:expired", handleExpiredSession);
+    return () => window.removeEventListener("auth:expired", handleExpiredSession);
+  }, [logout]);
 
   const hasRole = useCallback((...roles) => {
     if (!role) return false;
