@@ -14,6 +14,8 @@ import FormInput from "../components/FormInput";
 import RequestDetails from "../pages/RequestDetails";
 import { useAuth } from "../context/authContext/AuthContext";
 import JoditEditor from "jodit-react";
+import { floorOptions } from "../constants/floorOptions";
+import { rephraseHtmlDescription, rephraseSentence } from "../utils/rephraseText";
 
 const Request = () => {
   // ✅ active dept from AuthContext
@@ -410,6 +412,17 @@ const Request = () => {
     }));
   };
 
+  const handleRephraseSubject = () => {
+    setNewRequest((prev) => ({
+      ...prev,
+      subject: rephraseSentence(prev.subject),
+    }));
+  };
+
+  const handleRephraseDescription = () => {
+    setContent((prev) => rephraseHtmlDescription(prev));
+  };
+
   const handleToggleChange = (field) => {
     if (field === "behalf") {
       setNewRequest((prev) => ({
@@ -576,6 +589,7 @@ const Request = () => {
   const selectedStatus = uniqueStatuses.find((opt) => opt.value === filters.status);
   const selectedPriority = priorityOptions.find((opt) => opt.value === newRequest.priority);
   const selectedCategory = departmentCategoryOptions.find((opt) => opt.value === newRequest.departmentCategory);
+  const selectedFloor = floorOptions.find((opt) => opt.value === newRequest.location);
   const selectedRequestTypeFilter = departmentCategoryOptions.find((opt) => opt.value === filters.requestType);
 
   return (
@@ -769,12 +783,17 @@ const Request = () => {
                     </div>
 
                     <div className="flex flex-col">
-                      <FormInput
-                        label="Location"
+                      <label className="mb-1 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        Floor / Building
+                      </label>
+                      <Select
                         name="location"
-                        value={newRequest.location}
-                        onChange={handleInputChange}
-                        required
+                        options={floorOptions}
+                        value={selectedFloor}
+                        onChange={handleSelectChange}
+                        placeholder="Select floor or building"
+                        classNamePrefix="react-select"
+                        isClearable
                       />
                     </div>
                   </div>
@@ -936,6 +955,16 @@ const Request = () => {
                     onChange={handleInputChange}
                     required
                   />
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleRephraseSubject}
+                      disabled={!newRequest.subject.trim()}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Rephrase Subject
+                    </button>
+                  </div>
                 </section>
 
                 {/* SECTION 4: Description */}
@@ -961,6 +990,16 @@ const Request = () => {
                       onChange={handleChange}
                     />
 
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleRephraseDescription}
+                      disabled={!((content || "").replace(/<[^>]+>/g, "").trim())}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Rephrase Description
+                    </button>
                   </div>
                 </section>
 

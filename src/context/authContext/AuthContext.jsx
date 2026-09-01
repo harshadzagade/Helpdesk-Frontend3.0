@@ -139,9 +139,13 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const res = await api.post("/api/auth/login", { email: loginEmail, password });
+      const nextExpiresAt = Date.now() + SESSION_DURATION_MS;
+
+      localStorage.setItem("auth.token", res.data.token);
+      localStorage.setItem(SESSION_EXPIRES_AT_KEY, String(nextExpiresAt));
 
       setToken(res.data.token);
-      setSessionExpiresAt(Date.now() + SESSION_DURATION_MS);
+      setSessionExpiresAt(nextExpiresAt);
       setRole(res.data.role);
       setName(res.data.name);
       setEmail(res.data.email);

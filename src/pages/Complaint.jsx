@@ -8,6 +8,8 @@ import FormInput from '../components/FormInput';
 import ComplaintDetails from '../pages/ComplaintDetails';
 import { useAuth } from '../context/authContext/AuthContext';
 import JoditEditor from 'jodit-react';
+import { floorOptions } from '../constants/floorOptions';
+import { rephraseHtmlDescription, rephraseSentence } from '../utils/rephraseText';
 
 const Complaint = () => {
   const { user, activeDepartmentId } = useAuth();
@@ -381,6 +383,19 @@ const Complaint = () => {
     setNewComplaint((prev) => ({ ...prev, [name]: selectedOption ? selectedOption.value : '' }));
   };
 
+  const handleRephraseSubject = () => {
+    setNewComplaint((prev) => ({
+      ...prev,
+      subject: rephraseSentence(prev.subject),
+    }));
+  };
+
+  const handleRephraseDescription = () => {
+    const nextContent = rephraseHtmlDescription(contentRef.current || content);
+    setContent(nextContent);
+    contentRef.current = nextContent;
+  };
+
   const handleToggleChange = (field) => {
     if (field === 'behalf') {
       setNewComplaint((prev) => ({
@@ -504,6 +519,7 @@ const Complaint = () => {
 
   const selectedStatus = uniqueStatuses.find(opt => opt.value === filters.status) || null;
   const selectedPriority = priorityOptions.find(opt => opt.value === newComplaint.priority) || null;
+  const selectedFloor = floorOptions.find(opt => opt.value === newComplaint.location) || null;
 
   const selectedCategoryFilter =
     categoryOptionsForFilter.find(opt => opt.value === filters.complaint_type) || null;
@@ -705,12 +721,16 @@ const Complaint = () => {
                     </div>
 
                     <div className="flex flex-col">
-                      <FormInput
-                        label="Location"
+                      <label className="mb-1 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        Floor / Building
+                      </label>
+                      <Select
                         name="location"
-                        value={newComplaint.location}
-                        onChange={handleInputChange}
-                        required
+                        options={floorOptions}
+                        value={selectedFloor}
+                        onChange={handleSelectChange}
+                        placeholder="Select floor or building"
+                        isClearable
                       />
                     </div>
                   </div>
@@ -861,6 +881,16 @@ const Complaint = () => {
                     onChange={handleInputChange}
                     required
                   />
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleRephraseSubject}
+                      disabled={!newComplaint.subject.trim()}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Rephrase Subject
+                    </button>
+                  </div>
                 </section>
 
                 {/* SECTION 4 */}
@@ -883,6 +913,16 @@ const Complaint = () => {
                       onChange={handleEditorChange} // ✅ no setState here
                       onBlur={handleEditorBlur}     // ✅ setState only here
                     />
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleRephraseDescription}
+                      disabled={!((contentRef.current || content || '').replace(/<[^>]+>/g, '').trim())}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Rephrase Description
+                    </button>
                   </div>
                 </section>
 
