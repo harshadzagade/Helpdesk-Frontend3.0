@@ -1,4 +1,35 @@
 const phraseReplacements = [
+  [/\bmousee\b/gi, "mouse"],
+  [/\bmose\b/gi, "mouse"],
+  [/\bmousse\b/gi, "mouse"],
+  [/\bkeybord\b/gi, "keyboard"],
+  [/\bkeybaord\b/gi, "keyboard"],
+  [/\bmoniter\b/gi, "monitor"],
+  [/\bmonitr\b/gi, "monitor"],
+  [/\bprintar\b/gi, "printer"],
+  [/\bprinterr\b/gi, "printer"],
+  [/\bscannar\b/gi, "scanner"],
+  [/\bscaner\b/gi, "scanner"],
+  [/\binternate\b/gi, "internet"],
+  [/\binternettt\b/gi, "internet"],
+  [/\bwifi\b/gi, "Wi-Fi"],
+  [/\bwi fi\b/gi, "Wi-Fi"],
+  [/\bconection\b/gi, "connection"],
+  [/\bconnecton\b/gi, "connection"],
+  [/\bavilable\b/gi, "available"],
+  [/\bavialable\b/gi, "available"],
+  [/\bsoftwere\b/gi, "software"],
+  [/\bhardwere\b/gi, "hardware"],
+  [/\bsystm\b/gi, "system"],
+  [/\bsytem\b/gi, "system"],
+  [/\bcomputr\b/gi, "computer"],
+  [/\bcompuer\b/gi, "computer"],
+  [/\blaptp\b/gi, "laptop"],
+  [/\bladptop\b/gi, "laptop"],
+  [/\bwrking\b/gi, "working"],
+  [/\bwroking\b/gi, "working"],
+  [/\bpropery\b/gi, "properly"],
+  [/\bproparly\b/gi, "properly"],
   [/\bplz\b/gi, "please"],
   [/\bpls\b/gi, "please"],
   [/\breq\b/gi, "request"],
@@ -34,6 +65,8 @@ export const rephraseSentence = (value = "") => {
   });
 
   text = text.replace(/\bis is not working\b/gi, "is not working");
+  text = text.replace(/\bnot available\b/gi, "is not available");
+  text = text.replace(/\bis is not available\b/gi, "is not available");
   text = text.replace(/\bi\b/g, "I");
 
   if (!text) return "";

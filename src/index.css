@@ -11,4 +11,61 @@
     .no-scrollbar::-webkit-scrollbar {
       display: none; /* Chrome, Safari, Edge: Hide scrollbar */
     }
+
+    .ai-rephrase-text-active input,
+    .ai-rephrase-text-active textarea,
+    .ai-rephrase-text-active .jodit-wysiwyg {
+      animation: ai-text-dissolve 1050ms ease-out;
+    }
+
+    .ai-rephrase-particle {
+      animation: ai-particle-dissolve 1000ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .ai-rephrase-text-scan {
+      animation: ai-scanline 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes ai-text-dissolve {
+      0% {
+        color: transparent;
+        text-shadow: 0 0 10px rgba(124, 58, 237, 0.9);
+      }
+      42% {
+        color: transparent;
+        text-shadow: 0 0 4px rgba(217, 70, 239, 0.75);
+      }
+      100% {
+        color: inherit;
+        text-shadow: 0 0 0 rgba(124, 58, 237, 0);
+      }
+    }
+
+    @keyframes ai-particle-dissolve {
+      0% {
+        opacity: 0;
+        transform: translate3d(0, 12px, 0) scale(0.35);
+      }
+      28% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate3d(8px, -24px, 0) scale(1.8);
+      }
+    }
+
+    @keyframes ai-scanline {
+      0% {
+        opacity: 0;
+        transform: translateX(-120%) skewX(-12deg);
+      }
+      35% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translateX(430%) skewX(-12deg);
+      }
+    }
   }

@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-function FormInput({ label, type, name, value, onChange, error, options, required, accept }) {
+function FormInput({ label, type, name, value, onChange, error, options, required, accept, spellCheck }) {
   return (
     <div className="mb-4">
       <label htmlFor={name} className="block text-sm font-bold text-gray-700">
@@ -48,6 +48,10 @@ function FormInput({ label, type, name, value, onChange, error, options, require
           name={name}
           value={value}
           onChange={onChange}
+          spellCheck={spellCheck}
+          lang="en"
+          autoCorrect="on"
+          autoCapitalize="sentences"
           className={`block w-full rounded-md py-1.5 px-2 ring-1 ring-inset ring-gray-400 focus:text-gray-800 ${
             error ? 'border-red-500' : ''
           }`}
@@ -74,6 +78,7 @@ FormInput.propTypes = {
   ),
   required: PropTypes.bool,
   accept: PropTypes.string, // Add accept prop for file input
+  spellCheck: PropTypes.bool,
 };
 
 FormInput.defaultProps = {
@@ -81,6 +86,7 @@ FormInput.defaultProps = {
   options: [],
   required: false,
   accept: null,
+  spellCheck: false,
 };
 
 export default FormInput;

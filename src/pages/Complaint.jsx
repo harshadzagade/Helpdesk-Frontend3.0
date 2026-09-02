@@ -5,11 +5,13 @@ import Table from '../components/Table';
 import Searchbar from '../components/Searchbar';
 import Select from 'react-select';
 import FormInput from '../components/FormInput';
+import AiRephraseButton from '../components/AiRephraseButton';
+import RephraseFieldEffect from '../components/RephraseFieldEffect';
 import ComplaintDetails from '../pages/ComplaintDetails';
 import { useAuth } from '../context/authContext/AuthContext';
 import JoditEditor from 'jodit-react';
 import { floorOptions } from '../constants/floorOptions';
-import { rephraseHtmlDescription, rephraseSentence } from '../utils/rephraseText';
+import { rephraseDescriptionHtml, rephraseSubjectText } from '../lib/rephraseApi';
 
 const Complaint = () => {
   const { user, activeDepartmentId } = useAuth();
@@ -48,6 +50,14 @@ const Complaint = () => {
     return 'all';
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rephraseEffect, setRephraseEffect] = useState({
+    subject: false,
+    description: false,
+  });
+  const [rephraseLoading, setRephraseLoading] = useState({
+    subject: false,
+    description: false,
+  });
 
   const [filters, setFilters] = useState({
     department: '',
@@ -354,6 +364,7 @@ const Complaint = () => {
     () => ({
       readonly: false,
       placeholder: 'Start typing...',
+      spellcheck: true,
     }),
     []
   );
@@ -383,17 +394,33 @@ const Complaint = () => {
     setNewComplaint((prev) => ({ ...prev, [name]: selectedOption ? selectedOption.value : '' }));
   };
 
-  const handleRephraseSubject = () => {
-    setNewComplaint((prev) => ({
-      ...prev,
-      subject: rephraseSentence(prev.subject),
-    }));
+  const handleRephraseSubject = async () => {
+    const subject = newComplaint.subject;
+    if (!subject.trim()) return;
+
+    setRephraseLoading((prev) => ({ ...prev, subject: true }));
+    const nextSubject = await rephraseSubjectText(subject);
+    setNewComplaint((prev) => ({ ...prev, subject: nextSubject }));
+    setRephraseLoading((prev) => ({ ...prev, subject: false }));
+    setRephraseEffect((prev) => ({ ...prev, subject: true }));
+    window.setTimeout(() => {
+      setRephraseEffect((prev) => ({ ...prev, subject: false }));
+    }, 1050);
   };
 
-  const handleRephraseDescription = () => {
-    const nextContent = rephraseHtmlDescription(contentRef.current || content);
+  const handleRephraseDescription = async () => {
+    const sourceContent = contentRef.current || content;
+    if (!sourceContent.replace(/<[^>]+>/g, '').trim()) return;
+
+    setRephraseLoading((prev) => ({ ...prev, description: true }));
+    const nextContent = await rephraseDescriptionHtml(sourceContent);
     setContent(nextContent);
     contentRef.current = nextContent;
+    setRephraseLoading((prev) => ({ ...prev, description: false }));
+    setRephraseEffect((prev) => ({ ...prev, description: true }));
+    window.setTimeout(() => {
+      setRephraseEffect((prev) => ({ ...prev, description: false }));
+    }, 1050);
   };
 
   const handleToggleChange = (field) => {
@@ -874,22 +901,23 @@ const Complaint = () => {
                     </div>
                   </div>
 
-                  <FormInput
-                    label="Subject"
-                    name="subject"
-                    value={newComplaint.subject}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <RephraseFieldEffect active={rephraseEffect.subject}>
+                    <FormInput
+                      label="Subject"
+                      name="subject"
+                      value={newComplaint.subject}
+                      onChange={handleInputChange}
+                      required
+                      spellCheck
+                    />
+                  </RephraseFieldEffect>
                   <div className="flex justify-end">
-                    <button
-                      type="button"
+                    <AiRephraseButton
                       onClick={handleRephraseSubject}
-                      disabled={!newComplaint.subject.trim()}
-                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!newComplaint.subject.trim() || rephraseLoading.subject}
                     >
-                      Rephrase Subject
-                    </button>
+                      {rephraseLoading.subject ? 'Polishing...' : 'AI Rephrase Subject'}
+                    </AiRephraseButton>
                   </div>
                 </section>
 
@@ -905,6 +933,7 @@ const Complaint = () => {
                     </div>
                   </div>
 
+                  <RephraseFieldEffect active={rephraseEffect.description}>
                   <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
                     <JoditEditor
                       ref={editor}
@@ -914,15 +943,14 @@ const Complaint = () => {
                       onBlur={handleEditorBlur}     // ✅ setState only here
                     />
                   </div>
+                  </RephraseFieldEffect>
                   <div className="flex justify-end">
-                    <button
-                      type="button"
+                    <AiRephraseButton
                       onClick={handleRephraseDescription}
-                      disabled={!((contentRef.current || content || '').replace(/<[^>]+>/g, '').trim())}
-                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!((contentRef.current || content || '').replace(/<[^>]+>/g, '').trim()) || rephraseLoading.description}
                     >
-                      Rephrase Description
-                    </button>
+                      {rephraseLoading.description ? 'Polishing...' : 'AI Rephrase Description'}
+                    </AiRephraseButton>
                   </div>
                 </section>
 

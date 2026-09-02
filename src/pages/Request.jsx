@@ -11,11 +11,13 @@ import Table from "../components/Table";
 import Searchbar from "../components/Searchbar";
 import Select from "react-select";
 import FormInput from "../components/FormInput";
+import AiRephraseButton from "../components/AiRephraseButton";
+import RephraseFieldEffect from "../components/RephraseFieldEffect";
 import RequestDetails from "../pages/RequestDetails";
 import { useAuth } from "../context/authContext/AuthContext";
 import JoditEditor from "jodit-react";
 import { floorOptions } from "../constants/floorOptions";
-import { rephraseHtmlDescription, rephraseSentence } from "../utils/rephraseText";
+import { rephraseDescriptionHtml, rephraseSubjectText } from "../lib/rephraseApi";
 
 const Request = () => {
   // ✅ active dept from AuthContext
@@ -51,6 +53,14 @@ const Request = () => {
     return "all";
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rephraseEffect, setRephraseEffect] = useState({
+    subject: false,
+    description: false,
+  });
+  const [rephraseLoading, setRephraseLoading] = useState({
+    subject: false,
+    description: false,
+  });
 
   /* ========================= ACTIVE DEPT UI ========================= */
 
@@ -360,6 +370,7 @@ const Request = () => {
       readonly: false,
       placeholder: "Start typing...",
       height: 260,
+      spellcheck: true,
       // ✅ avoid heavy base64 insertion (optional)
       uploader: { insertImageAsBase64URI: false },
     }),
@@ -412,15 +423,31 @@ const Request = () => {
     }));
   };
 
-  const handleRephraseSubject = () => {
-    setNewRequest((prev) => ({
-      ...prev,
-      subject: rephraseSentence(prev.subject),
-    }));
+  const handleRephraseSubject = async () => {
+    const subject = newRequest.subject;
+    if (!subject.trim()) return;
+
+    setRephraseLoading((prev) => ({ ...prev, subject: true }));
+    const nextSubject = await rephraseSubjectText(subject);
+    setNewRequest((prev) => ({ ...prev, subject: nextSubject }));
+    setRephraseLoading((prev) => ({ ...prev, subject: false }));
+    setRephraseEffect((prev) => ({ ...prev, subject: true }));
+    window.setTimeout(() => {
+      setRephraseEffect((prev) => ({ ...prev, subject: false }));
+    }, 1050);
   };
 
-  const handleRephraseDescription = () => {
-    setContent((prev) => rephraseHtmlDescription(prev));
+  const handleRephraseDescription = async () => {
+    if (!content.replace(/<[^>]+>/g, "").trim()) return;
+
+    setRephraseLoading((prev) => ({ ...prev, description: true }));
+    const nextContent = await rephraseDescriptionHtml(content);
+    setContent(nextContent);
+    setRephraseLoading((prev) => ({ ...prev, description: false }));
+    setRephraseEffect((prev) => ({ ...prev, description: true }));
+    window.setTimeout(() => {
+      setRephraseEffect((prev) => ({ ...prev, description: false }));
+    }, 1050);
   };
 
   const handleToggleChange = (field) => {
@@ -948,22 +975,23 @@ const Request = () => {
                     </div>
                   </div>
 
-                  <FormInput
-                    label="Subject"
-                    name="subject"
-                    value={newRequest.subject}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <RephraseFieldEffect active={rephraseEffect.subject}>
+                    <FormInput
+                      label="Subject"
+                      name="subject"
+                      value={newRequest.subject}
+                      onChange={handleInputChange}
+                      required
+                      spellCheck
+                    />
+                  </RephraseFieldEffect>
                   <div className="flex justify-end">
-                    <button
-                      type="button"
+                    <AiRephraseButton
                       onClick={handleRephraseSubject}
-                      disabled={!newRequest.subject.trim()}
-                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!newRequest.subject.trim() || rephraseLoading.subject}
                     >
-                      Rephrase Subject
-                    </button>
+                      {rephraseLoading.subject ? 'Polishing...' : 'AI Rephrase Subject'}
+                    </AiRephraseButton>
                   </div>
                 </section>
 
@@ -981,6 +1009,7 @@ const Request = () => {
                     </div>
                   </div>
 
+                  <RephraseFieldEffect active={rephraseEffect.description}>
                   <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
                     <JoditEditor
                       ref={editor}
@@ -991,15 +1020,14 @@ const Request = () => {
                     />
 
                   </div>
+                  </RephraseFieldEffect>
                   <div className="flex justify-end">
-                    <button
-                      type="button"
+                    <AiRephraseButton
                       onClick={handleRephraseDescription}
-                      disabled={!((content || "").replace(/<[^>]+>/g, "").trim())}
-                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!((content || "").replace(/<[^>]+>/g, "").trim()) || rephraseLoading.description}
                     >
-                      Rephrase Description
-                    </button>
+                      {rephraseLoading.description ? 'Polishing...' : 'AI Rephrase Description'}
+                    </AiRephraseButton>
                   </div>
                 </section>
 
