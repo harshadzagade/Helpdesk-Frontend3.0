@@ -177,7 +177,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error(err);
       const msg = err?.response?.data?.message || "Login failed. Check credentials.";
-      return { ok: false, message: msg };
+      return { ok: false, message: msg, code: err?.response?.data?.code };
     } finally {
       setLoading(false);
     }

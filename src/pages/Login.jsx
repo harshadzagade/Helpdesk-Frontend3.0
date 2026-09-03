@@ -64,8 +64,10 @@ const Login = () => {
       navigate(from, { replace: true });
     } else {
       const msg = res.message || 'Login failed. Check your credentials.';
-      // Check for initial password prompt
-      if (msg === 'Please set your initial password first using the setInitialPassword endpoint.') {
+      const needsInitialPassword =
+        res.code === 'INITIAL_PASSWORD_REQUIRED' ||
+        /initial password|first[-\s]?time password/i.test(msg);
+      if (needsInitialPassword) {
         setShowInitial(true);
         setCurrentPass(password.trim()); // Prefill with the temporary password they entered
         setInitErr('');
