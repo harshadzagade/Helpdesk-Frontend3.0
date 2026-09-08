@@ -21,12 +21,17 @@ const csvToArray = (csv = '') =>
     .map(s => s.trim())
     .filter(Boolean);
 
+const getTypeOption = (type) => {
+  const value = toStr(type).trim().toLowerCase();
+  return uniqueTypes.find((opt) => opt.value.toLowerCase() === value) || null;
+};
+
 // Custom TagsInput component (with Tailwind classes)
 const TagsInput = ({ label, name, value = '', onChange, disabled, placeholder }) => {
   const [inputValue, setInputValue] = useState('');
   
   // Parse value as comma-separated string into tags array
-  const tags = value
+  const tags = toStr(value)
     .split(',')
     .map((tag) => tag.trim())
     .filter((tag) => tag.length > 0);
@@ -39,7 +44,8 @@ const TagsInput = ({ label, name, value = '', onChange, disabled, placeholder })
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
       const newTag = inputValue.trim();
-      if (newTag && !tags.includes(newTag)) {
+      const alreadyExists = tags.some((tag) => tag.toLowerCase() === newTag.toLowerCase());
+      if (newTag && !alreadyExists) {
         // Append to the comma-separated string
         const newValue = value ? `${value}, ${newTag}` : newTag;
         onChange({ target: { value: newValue } });
@@ -108,7 +114,7 @@ const Department = () => {
     category: '',      // CSV; backend normalizes
   });
 
-  const showCategory = form.type?.value === 'Service';
+  const showCategory = toStr(form.type?.value).trim().toLowerCase() === 'service';
 
   const resetForm = () => {
     setForm({ id: null, department: '', type: null, category: '' });
@@ -196,8 +202,10 @@ const Department = () => {
     setForm({
       id: row.id,
       department: row.department || '',
-      type: row.type ? { value: row.type, label: row.type } : null,
-      category: row.type === 'Service' ? (Array.isArray(row.category) ? row.category.join(', ') : (row.category || '')) : '',
+      type: getTypeOption(row.type),
+      category: toStr(row.type).trim().toLowerCase() === 'service'
+        ? (Array.isArray(row.category) ? row.category.join(', ') : (row.category || ''))
+        : '',
     });
     setIsEditing(true);
     setIsFormVisible(true);

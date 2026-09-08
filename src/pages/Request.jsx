@@ -34,14 +34,15 @@ const escapeHtml = (value) =>
 
 const buildUserCreationDescription = (details) => {
   const rows = [
-    ["Full Name", details.fullName],
-    ["Employee / Student ID", details.employeeCode],
-    ["Email ID", details.email],
-    ["Mobile / Extension", details.contact],
-    ["Institute / Department", details.department],
-    ["Role / Access Required", details.accessRole],
-    ["Effective / Joining Date", details.effectiveDate],
-    ["Remarks", details.remarks],
+    ["First Name", details.firstName],
+    ["Middle Name", details.middleName],
+    ["Last Name", details.lastName],
+    ["Email ID", details.emailId],
+    ["Contact No.", details.contactNo],
+    ["Extension", details.extension],
+    ["Employee Type", details.employeeType],
+    ["Institute", details.institute],
+    ["Department", details.department],
   ];
 
   return `
@@ -347,7 +348,7 @@ const Request = () => {
     const deptName = String(dept?.department || selectedDepartment?.label || "")
       .trim()
       .toLowerCase();
-    if (deptName === "erp") {
+    if (deptName === "erp" || deptName.includes("erp")) {
       cats.add(USER_CREATION_CATEGORY);
     }
 
@@ -491,29 +492,36 @@ const Request = () => {
       title: "User Creation Details",
       html: `
         <div style="text-align:left">
-          <label style="${labelStyle}" for="ucFullName">Full Name *</label>
-          <input id="ucFullName" class="swal2-input" style="${inputStyle}" placeholder="Enter full name">
+          <label style="${labelStyle}" for="ucFirstName">First Name *</label>
+          <input id="ucFirstName" class="swal2-input" style="${inputStyle}" placeholder="Enter first name">
 
-          <label style="${labelStyle}" for="ucEmployeeCode">Employee / Student ID</label>
-          <input id="ucEmployeeCode" class="swal2-input" style="${inputStyle}" placeholder="Enter ID if available">
+          <label style="${labelStyle}" for="ucMiddleName">Middle Name</label>
+          <input id="ucMiddleName" class="swal2-input" style="${inputStyle}" placeholder="Enter middle name">
 
-          <label style="${labelStyle}" for="ucEmail">Email ID *</label>
-          <input id="ucEmail" class="swal2-input" style="${inputStyle}" placeholder="Enter email address">
+          <label style="${labelStyle}" for="ucLastName">Last Name *</label>
+          <input id="ucLastName" class="swal2-input" style="${inputStyle}" placeholder="Enter last name">
 
-          <label style="${labelStyle}" for="ucContact">Mobile / Extension</label>
-          <input id="ucContact" class="swal2-input" style="${inputStyle}" placeholder="Enter mobile number or extension">
+          <label style="${labelStyle}" for="ucEmailId">Email ID *</label>
+          <input id="ucEmailId" class="swal2-input" style="${inputStyle}" placeholder="Enter email address">
 
-          <label style="${labelStyle}" for="ucDepartment">Institute / Department *</label>
-          <input id="ucDepartment" class="swal2-input" style="${inputStyle}" placeholder="Enter institute or department">
+          <label style="${labelStyle}" for="ucContactNo">Contact No.</label>
+          <input id="ucContactNo" class="swal2-input" style="${inputStyle}" placeholder="Enter contact number">
 
-          <label style="${labelStyle}" for="ucAccessRole">Role / Access Required *</label>
-          <input id="ucAccessRole" class="swal2-input" style="${inputStyle}" placeholder="Example: Staff, Faculty, Admin access">
+          <label style="${labelStyle}" for="ucExtension">Extension</label>
+          <input id="ucExtension" class="swal2-input" style="${inputStyle}" placeholder="Enter extension number">
 
-          <label style="${labelStyle}" for="ucEffectiveDate">Effective / Joining Date</label>
-          <input id="ucEffectiveDate" class="swal2-input" style="${inputStyle}" type="date">
+          <label style="${labelStyle}" for="ucEmployeeType">Employee Type *</label>
+          <select id="ucEmployeeType" style="${inputStyle}">
+            <option value="">Select employee type</option>
+            <option value="Teaching">Teaching</option>
+            <option value="Non Teaching">Non Teaching</option>
+          </select>
 
-          <label style="${labelStyle}" for="ucRemarks">Remarks</label>
-          <textarea id="ucRemarks" style="${inputStyle};min-height:74px;resize:vertical;" placeholder="Any additional details"></textarea>
+          <label style="${labelStyle}" for="ucInstitute">Institute *</label>
+          <input id="ucInstitute" class="swal2-input" style="${inputStyle}" placeholder="Enter institute">
+
+          <label style="${labelStyle}" for="ucDepartment">Department *</label>
+          <input id="ucDepartment" class="swal2-input" style="${inputStyle}" placeholder="Enter department">
         </div>
       `,
       width: 620,
@@ -524,19 +532,27 @@ const Request = () => {
       preConfirm: () => {
         const getValue = (id) => document.getElementById(id)?.value.trim() || "";
         const details = {
-          fullName: getValue("ucFullName"),
-          employeeCode: getValue("ucEmployeeCode"),
-          email: getValue("ucEmail"),
-          contact: getValue("ucContact"),
+          firstName: getValue("ucFirstName"),
+          middleName: getValue("ucMiddleName"),
+          lastName: getValue("ucLastName"),
+          emailId: getValue("ucEmailId"),
+          contactNo: getValue("ucContactNo"),
+          extension: getValue("ucExtension"),
+          employeeType: getValue("ucEmployeeType"),
+          institute: getValue("ucInstitute"),
           department: getValue("ucDepartment"),
-          accessRole: getValue("ucAccessRole"),
-          effectiveDate: getValue("ucEffectiveDate"),
-          remarks: getValue("ucRemarks"),
         };
 
-        if (!details.fullName || !details.email || !details.department || !details.accessRole) {
+        if (
+          !details.firstName ||
+          !details.lastName ||
+          !details.emailId ||
+          !details.employeeType ||
+          !details.institute ||
+          !details.department
+        ) {
           Swal.showValidationMessage(
-            "Please fill Full Name, Email ID, Institute / Department, and Role / Access Required."
+            "Please fill First Name, Last Name, Email ID, Employee Type, Institute, and Department."
           );
           return false;
         }
@@ -571,7 +587,7 @@ const Request = () => {
       setNewRequest((prev) => ({
         ...prev,
         departmentCategory: selectedValue,
-        subject: `User Creation Request - ${details.fullName}`,
+        subject: `User Creation Request - ${[details.firstName, details.middleName, details.lastName].filter(Boolean).join(" ")}`,
       }));
       setContent(buildUserCreationDescription(details));
       return;
@@ -948,7 +964,7 @@ const Request = () => {
                         name="departmentCategory"
                         options={departmentCategoryOptions}
                         value={selectedCategory}
-                        onChange={handleSelectChange}
+                        onChange={(opt) => handleSelectChange(opt, { name: "departmentCategory" })}
                         placeholder="Select request type"
                         classNamePrefix="react-select"
                         isDisabled={!selectedDepartmentForm}
