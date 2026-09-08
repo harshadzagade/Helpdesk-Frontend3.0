@@ -19,6 +19,49 @@ import JoditEditor from "jodit-react";
 import { floorOptions } from "../constants/floorOptions";
 import { rephraseDescriptionHtml, rephraseSubjectText } from "../lib/rephraseApi";
 
+const USER_CREATION_CATEGORY = "User Creation";
+
+const isUserCreationCategory = (value) =>
+  String(value || "").trim().toLowerCase() === USER_CREATION_CATEGORY.toLowerCase();
+
+const escapeHtml = (value) =>
+  String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+const buildUserCreationDescription = (details) => {
+  const rows = [
+    ["Full Name", details.fullName],
+    ["Employee / Student ID", details.employeeCode],
+    ["Email ID", details.email],
+    ["Mobile / Extension", details.contact],
+    ["Institute / Department", details.department],
+    ["Role / Access Required", details.accessRole],
+    ["Effective / Joining Date", details.effectiveDate],
+    ["Remarks", details.remarks],
+  ];
+
+  return `
+    <table style="width:100%; border-collapse:collapse;">
+      <tbody>
+        ${rows
+          .map(
+            ([label, value]) => `
+              <tr>
+                <td style="width:32%; border:1px solid #d1d5db; padding:8px; font-weight:600;">${escapeHtml(label)}</td>
+                <td style="border:1px solid #d1d5db; padding:8px;">${escapeHtml(value || "-")}</td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+};
+
 const Request = () => {
   // ✅ active dept from AuthContext
   const { user, activeDepartmentId } = useAuth();
@@ -34,7 +77,8 @@ const Request = () => {
   const [selectedRequest, setSelectedRequest] = useState(null);
 
   const [department, setDepartment] = useState([]); // all departments (for target dept selection/filter)
-  const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState(null);
+  const [selectedDepartmentForm, setSelectedDepartmentForm] = useState(null);
 
   const editor = useRef(null);
   const [content, setContent] = useState("");
@@ -71,7 +115,7 @@ const Request = () => {
 
   /* ========================= FETCH REQUESTS ========================= */
 
-  const fetchRequests = useCallback(async (view = "all") => {
+  const fetchRequests = useCallback(async (view = "all", departmentIdOverride = null) => {
     try {
       let url = "/api/requests";
 
@@ -83,7 +127,10 @@ const Request = () => {
         url = "/api/requests/department-requests"; // ✅ activeDepartment middleware expects header
       }
 
-      const res = await api.get(url);
+      const config = departmentIdOverride
+        ? { headers: { "x-department-id": String(departmentIdOverride) } }
+        : undefined;
+      const res = await api.get(url, config);
       const data = Array.isArray(res.data) ? res.data : res.data.data || [];
       setRequests(data || []);
       return data || [];
@@ -105,9 +152,9 @@ const Request = () => {
     if (!activeDepartmentId) return;
 
     if (requestView === "incoming" || requestView === "departmentRequests") {
-      fetchRequests(requestView);
+      fetchRequests(requestView, filters.department || activeDepartmentId);
     }
-  }, [activeDepartmentId, requestView, fetchRequests]);
+  }, [activeDepartmentId, filters.department, requestView, fetchRequests]);
 
   const activeDeptType = useMemo(() => {
     if (!activeDepartmentId || !Array.isArray(department)) return null;
@@ -284,7 +331,7 @@ const Request = () => {
       .map((x) => ({ value: x.id, label: x.department }));
   }, [department]);
 
-  const departmentCategoryOptions = useMemo(() => {
+  const getDepartmentCategoryOptions = useCallback((selectedDepartment) => {
     if (!selectedDepartment) return [];
 
     const dept = (department || []).find((d) => d.id === selectedDepartment.value);
@@ -297,8 +344,25 @@ const Request = () => {
       });
     });
 
+    const deptName = String(dept?.department || selectedDepartment?.label || "")
+      .trim()
+      .toLowerCase();
+    if (deptName === "erp") {
+      cats.add(USER_CREATION_CATEGORY);
+    }
+
     return Array.from(cats).map((v) => ({ value: v, label: v }));
-  }, [department, selectedDepartment]);
+  }, [department]);
+
+  const departmentCategoryOptions = useMemo(
+    () => getDepartmentCategoryOptions(selectedDepartmentForm),
+    [getDepartmentCategoryOptions, selectedDepartmentForm]
+  );
+
+  const requestTypeOptionsForFilter = useMemo(
+    () => getDepartmentCategoryOptions(selectedDepartmentFilter),
+    [getDepartmentCategoryOptions, selectedDepartmentFilter]
+  );
 
   const staffOptions = useMemo(() => {
     if (!Array.isArray(staffList)) return [];
@@ -343,10 +407,11 @@ const Request = () => {
   // Filter change
   const handleFilterChange = (selectedOption, { name }) => {
     if (name === "department") {
-      setSelectedDepartment(selectedOption || null);
+      setSelectedDepartmentFilter(selectedOption || null);
       setFilters((prev) => ({
         ...prev,
         department: selectedOption ? selectedOption.value : "",
+        requestType: "",
       }));
       return;
     }
@@ -388,7 +453,7 @@ const Request = () => {
 
   const clearFilters = () => {
     setFilters({ department: "", status: "", requestType: "" });
-    setSelectedDepartment(null);
+    setSelectedDepartmentFilter(null);
   };
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
@@ -416,10 +481,105 @@ const Request = () => {
     setNewRequest((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (selectedOption, { name }) => {
+  const openUserCreationDialog = async () => {
+    const inputStyle =
+      "width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:6px;padding:9px 10px;font-size:13px;";
+    const labelStyle =
+      "display:block;margin:10px 0 4px;text-align:left;font-size:12px;font-weight:600;color:#374151;";
+
+    const result = await Swal.fire({
+      title: "User Creation Details",
+      html: `
+        <div style="text-align:left">
+          <label style="${labelStyle}" for="ucFullName">Full Name *</label>
+          <input id="ucFullName" class="swal2-input" style="${inputStyle}" placeholder="Enter full name">
+
+          <label style="${labelStyle}" for="ucEmployeeCode">Employee / Student ID</label>
+          <input id="ucEmployeeCode" class="swal2-input" style="${inputStyle}" placeholder="Enter ID if available">
+
+          <label style="${labelStyle}" for="ucEmail">Email ID *</label>
+          <input id="ucEmail" class="swal2-input" style="${inputStyle}" placeholder="Enter email address">
+
+          <label style="${labelStyle}" for="ucContact">Mobile / Extension</label>
+          <input id="ucContact" class="swal2-input" style="${inputStyle}" placeholder="Enter mobile number or extension">
+
+          <label style="${labelStyle}" for="ucDepartment">Institute / Department *</label>
+          <input id="ucDepartment" class="swal2-input" style="${inputStyle}" placeholder="Enter institute or department">
+
+          <label style="${labelStyle}" for="ucAccessRole">Role / Access Required *</label>
+          <input id="ucAccessRole" class="swal2-input" style="${inputStyle}" placeholder="Example: Staff, Faculty, Admin access">
+
+          <label style="${labelStyle}" for="ucEffectiveDate">Effective / Joining Date</label>
+          <input id="ucEffectiveDate" class="swal2-input" style="${inputStyle}" type="date">
+
+          <label style="${labelStyle}" for="ucRemarks">Remarks</label>
+          <textarea id="ucRemarks" style="${inputStyle};min-height:74px;resize:vertical;" placeholder="Any additional details"></textarea>
+        </div>
+      `,
+      width: 620,
+      showCancelButton: true,
+      confirmButtonText: "Add to Request",
+      cancelButtonText: "Cancel",
+      focusConfirm: false,
+      preConfirm: () => {
+        const getValue = (id) => document.getElementById(id)?.value.trim() || "";
+        const details = {
+          fullName: getValue("ucFullName"),
+          employeeCode: getValue("ucEmployeeCode"),
+          email: getValue("ucEmail"),
+          contact: getValue("ucContact"),
+          department: getValue("ucDepartment"),
+          accessRole: getValue("ucAccessRole"),
+          effectiveDate: getValue("ucEffectiveDate"),
+          remarks: getValue("ucRemarks"),
+        };
+
+        if (!details.fullName || !details.email || !details.department || !details.accessRole) {
+          Swal.showValidationMessage(
+            "Please fill Full Name, Email ID, Institute / Department, and Role / Access Required."
+          );
+          return false;
+        }
+
+        return details;
+      },
+    });
+
+    return result.isConfirmed ? result.value : null;
+  };
+
+  const handleSelectChange = async (selectedOption, { name }) => {
+    const selectedValue = selectedOption ? selectedOption.value : "";
+
+    if (name === "departmentId") {
+      setNewRequest((prev) => ({
+        ...prev,
+        departmentId: selectedValue,
+        departmentCategory: "",
+      }));
+      return;
+    }
+
+    if (name === "departmentCategory" && isUserCreationCategory(selectedValue)) {
+      const details = await openUserCreationDialog();
+
+      if (!details) {
+        setNewRequest((prev) => ({ ...prev, departmentCategory: "" }));
+        return;
+      }
+
+      setNewRequest((prev) => ({
+        ...prev,
+        departmentCategory: selectedValue,
+        subject: `User Creation Request - ${details.fullName}`,
+      }));
+      setContent(buildUserCreationDescription(details));
+      return;
+    }
+
     setNewRequest((prev) => ({
       ...prev,
-      [name]: selectedOption ? selectedOption.value : "",
+      [name]: selectedValue,
     }));
   };
 
@@ -569,7 +729,7 @@ const Request = () => {
       behalf: false,
       behalfId: null,
     });
-    setSelectedDepartment(null);
+    setSelectedDepartmentForm(null);
     setContent("");
     setAttachmentFiles([]);
     setIsFormVisible(false);
@@ -617,7 +777,7 @@ const Request = () => {
   const selectedPriority = priorityOptions.find((opt) => opt.value === newRequest.priority);
   const selectedCategory = departmentCategoryOptions.find((opt) => opt.value === newRequest.departmentCategory);
   const selectedFloor = floorOptions.find((opt) => opt.value === newRequest.location);
-  const selectedRequestTypeFilter = departmentCategoryOptions.find((opt) => opt.value === filters.requestType);
+  const selectedRequestTypeFilter = requestTypeOptionsForFilter.find((opt) => opt.value === filters.requestType);
 
   return (
     <>
@@ -685,7 +845,7 @@ const Request = () => {
                     <Select
                       name="department"
                       options={departmentNameOptions}
-                      value={selectedDepartment}
+                      value={selectedDepartmentFilter}
                       onChange={handleFilterChange}
                       placeholder="Select Department"
                       isClearable
@@ -696,11 +856,11 @@ const Request = () => {
                     <span className="text-xs font-medium text-gray-600">Request Type</span>
                     <Select
                       name="requestType"
-                      options={departmentCategoryOptions}
+                      options={requestTypeOptionsForFilter}
                       value={selectedRequestTypeFilter}
                       onChange={handleFilterChange}
                       placeholder="Select Request Type"
-                      isDisabled={!selectedDepartment}
+                      isDisabled={!selectedDepartmentFilter}
                     />
                   </label>
 
@@ -769,9 +929,9 @@ const Request = () => {
                       <Select
                         name="departmentId"
                         options={departmentNameOptions}
-                        value={selectedDepartment}
+                        value={selectedDepartmentForm}
                         onChange={(opt) => {
-                          setSelectedDepartment(opt);
+                          setSelectedDepartmentForm(opt);
                           handleSelectChange(opt, { name: "departmentId" });
                         }}
                         placeholder="Select department"
@@ -791,7 +951,7 @@ const Request = () => {
                         onChange={handleSelectChange}
                         placeholder="Select request type"
                         classNamePrefix="react-select"
-                        isDisabled={!selectedDepartment}
+                        isDisabled={!selectedDepartmentForm}
                       />
                     </div>
 

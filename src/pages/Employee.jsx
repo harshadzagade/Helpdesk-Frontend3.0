@@ -56,6 +56,7 @@ const Employee = () => {
   const canManage = isSuperadmin; // only superadmin can create/update/delete
   const canChangeRole = isAdmin || isSuperadmin; // both can change role, but admins have restrictions in onChangeRole handler
   const canEditExtension = isSuperadmin || canManageExtensions;
+  const canUseEmployeeActions = canViewRole || canEditExtension;
 
   const activeDeptId = activeDepartmentId != null ? Number(activeDepartmentId) : null;
 
@@ -320,12 +321,12 @@ const Employee = () => {
     {
       key: 'instituteName',
       label: 'Institute',
-      render: (row) => toStr(row.instituteName)
+      format: (_value, row) => toStr(row.instituteName)
     },
     {
       key: 'departmentNames',
       label: 'Department(s)',
-      render: (row) => Array.isArray(row.departmentNames) ? row.departmentNames.join(', ') : ''
+      format: (_value, row) => Array.isArray(row.departmentNames) ? row.departmentNames.join(', ') : ''
     },
   ];
 
@@ -336,14 +337,14 @@ const Employee = () => {
       {
         key: 'canManageExtensions',
         label: 'Extension Access',
-        render: (row) => (
+        format: (_value, row) => (
           row.canManageExtensions || row.canUpdateExtensions ? 'Allowed' : 'No'
         ),
       },
       {
         key: 'canManagePolicies',
         label: 'Policy Access',
-        render: (row) => (
+        format: (_value, row) => (
           row.canManagePolicies || row.canUploadPolicies ? 'Allowed' : 'No'
         ),
       },
@@ -354,12 +355,12 @@ const Employee = () => {
     {
       key: 'phoneNumber',
       label: 'Contact No',
-      render: (row) => toStr(row.phoneNumber)
+      format: (_value, row) => toStr(row.phoneNumber)
     },
     {
       key: 'contactExtension',
       label: 'Extension',
-      render: (row) => toStr(row.contactExtension)
+      format: (_value, row) => toStr(row.contactExtension)
     },
   );
 
@@ -1197,7 +1198,7 @@ const Employee = () => {
           <Table
             data={filteredData}
             columns={columns}
-            actions={canViewRole ? actions : []}    // ✅ only Admin/Superadmin
+            actions={canUseEmployeeActions ? actions : []}
             onRowClick={handleRowClick}
             isFormVisible={isFormVisible}
             setIsFormVisible={setIsFormVisible}

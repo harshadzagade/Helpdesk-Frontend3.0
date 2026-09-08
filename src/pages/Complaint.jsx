@@ -79,7 +79,7 @@ const Complaint = () => {
   const isSuperadmin = String(user?.role || '').toLowerCase() === 'superadmin';
 
   // ------------------ API: fetch complaints by view ------------------
-  const fetchComplaints = useCallback(async (view = 'all') => {
+  const fetchComplaints = useCallback(async (view = 'all', departmentIdOverride = null) => {
     try {
       let url = '/api/complaints';
 
@@ -87,7 +87,10 @@ const Complaint = () => {
       else if (view === 'incomming') url = '/api/complaints/incomming';
       else if (view === 'departmentComplaints') url = '/api/complaints/department-complaints';
 
-      const res = await api.get(url);
+      const config = departmentIdOverride
+        ? { headers: { 'x-department-id': String(departmentIdOverride) } }
+        : undefined;
+      const res = await api.get(url, config);
       const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       setComplaints(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -99,8 +102,12 @@ const Complaint = () => {
 
   useEffect(() => {
     if (!complaintView) return;
-    fetchComplaints(complaintView);
-  }, [complaintView, fetchComplaints, activeDepartmentId]);
+    const departmentIdOverride =
+      complaintView === 'incomming' || complaintView === 'departmentComplaints'
+        ? filters.department || activeDepartmentId
+        : null;
+    fetchComplaints(complaintView, departmentIdOverride);
+  }, [complaintView, fetchComplaints, activeDepartmentId, filters.department]);
 
 
 

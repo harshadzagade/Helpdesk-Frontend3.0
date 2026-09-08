@@ -8,12 +8,14 @@ import PDFimg from '../assets/pdfimg.jpg'
 
 
 const Policies = () => {
-  const { user } = useAuth(); // 👉 yahan se direct user mil raha hai
+    const { user, canManagePolicies } = useAuth();
   const [isFormVisible, setIsFormVisible] = React.useState(false);
 
   // form state
   const [policyName, setPolicyName] = React.useState('');
   const [selectedRoles, setSelectedRoles] = React.useState([]);
+  const [policyScope, setPolicyScope] = React.useState({ value: 'all', label: 'All Departments' });
+  const [selectedDepartments, setSelectedDepartments] = React.useState([]);
   const [file, setFile] = React.useState(null);
 
   // CRUD mode
@@ -21,6 +23,7 @@ const Policies = () => {
 
   // data state
   const [policies, setPolicies] = React.useState([]);
+  const [departments, setDepartments] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -33,8 +36,27 @@ const Policies = () => {
   ];
 
   // 🔐 Auth se role check
-  const canManage = user?.role === 'superadmin';
+  const canManage = user?.role === 'superadmin' || Boolean(canManagePolicies);
   console.log('Auth user:', user, 'Can manage policies:', canManage);
+
+  const scopeOptions = [
+    { value: 'all', label: 'All Departments' },
+    { value: 'selected', label: 'Selected Departments' },
+  ];
+
+  const departmentOptions = React.useMemo(
+    () => (departments || []).map((dept) => ({
+      value: Number(dept.id),
+      label: dept.department || dept.name || `Department ${dept.id}`,
+    })),
+    [departments]
+  );
+
+  const departmentNameById = React.useMemo(() => {
+    const map = new Map();
+    departmentOptions.forEach((dept) => map.set(Number(dept.value), dept.label));
+    return map;
+  }, [departmentOptions]);
 
   // =======================
   // Fetch policies on load
@@ -58,12 +80,29 @@ const Policies = () => {
     fetchPolicies();
   }, []);
 
+  React.useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await api.get('/api/departments');
+        const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+        setDepartments(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error('Failed to fetch departments', err);
+        setDepartments([]);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
+
   // =======================
   // Reset form
   // =======================
   const resetForm = () => {
     setPolicyName('');
     setSelectedRoles([]);
+    setPolicyScope({ value: 'all', label: 'All Departments' });
+    setSelectedDepartments([]);
     setFile(null);
     setEditingPolicyId(null);
   };
@@ -82,16 +121,25 @@ const Policies = () => {
       alert('Please select at least one role');
       return;
     }
+    if (policyScope.value === 'selected' && !selectedDepartments.length) {
+      alert('Please select at least one department or choose All Departments');
+      return;
+    }
 
     try {
       setSubmitting(true);
       setError('');
 
       const roles = selectedRoles.map((r) => r.value);
+      const departmentIds =
+        policyScope.value === 'selected'
+          ? selectedDepartments.map((dept) => dept.value)
+          : [];
 
       const formData = new FormData();
       formData.append('policyName', policyName);
       formData.append('assignRole', JSON.stringify(roles)); // backend JSON parse karega
+      formData.append('departmentIds', JSON.stringify(departmentIds));
       if (file) {
         formData.append('attachment', file);
       }
@@ -153,6 +201,17 @@ const Policies = () => {
       : [];
 
     setSelectedRoles(mappedRoles);
+    const mappedDepartments = Array.isArray(policy.departmentIds)
+      ? policy.departmentIds
+        .map((id) => departmentOptions.find((opt) => Number(opt.value) === Number(id)) || {
+          value: Number(id),
+          label: departmentNameById.get(Number(id)) || `Department ${id}`,
+        })
+        .filter((dept) => Number.isInteger(Number(dept.value)))
+      : [];
+
+    setPolicyScope(mappedDepartments.length ? { value: 'selected', label: 'Selected Departments' } : { value: 'all', label: 'All Departments' });
+    setSelectedDepartments(mappedDepartments);
     setFile(null);
   };
 
@@ -263,6 +322,39 @@ const Policies = () => {
             </div>
 
             <div className="flex flex-col">
+              <label className="block text-sm font-bold text-gray-700 mb-1">
+                Policy Scope
+              </label>
+              <Select
+                options={scopeOptions}
+                value={policyScope}
+                onChange={(option) => {
+                  const nextScope = option || scopeOptions[0];
+                  setPolicyScope(nextScope);
+                  if (nextScope.value === 'all') setSelectedDepartments([]);
+                }}
+                placeholder="Select scope"
+                className="w-full text-sm"
+              />
+            </div>
+
+            {policyScope.value === 'selected' && (
+              <div className="flex flex-col md:col-span-2">
+                <label className="block text-sm font-bold text-gray-700 mb-1">
+                  Select Department(s)
+                </label>
+                <Select
+                  options={departmentOptions}
+                  value={selectedDepartments}
+                  onChange={(options) => setSelectedDepartments(options || [])}
+                  placeholder="Select department(s)"
+                  className="w-full text-sm"
+                  isMulti
+                />
+              </div>
+            )}
+
+            <div className="flex flex-col">
               <label
                 htmlFor="policyFile"
                 className="block text-sm font-bold text-gray-700 "
@@ -323,6 +415,11 @@ const Policies = () => {
               onDelete={() => handleDelete(policy.id)}
               onEdit={() => handleEdit(policy)}
               canManage={canManage}
+              scopeLabel={
+                Array.isArray(policy.departmentIds) && policy.departmentIds.length
+                  ? policy.departmentIds.map((id) => departmentNameById.get(Number(id)) || `Department ${id}`).join(', ')
+                  : 'All Departments'
+              }
             />
           ))}
           {!policies.length && (
@@ -351,6 +448,7 @@ const PolicyCard = ({
   onDelete,
   onEdit,
   canManage,
+  scopeLabel,
 }) => (
   <div className="group relative flex flex-col p-4 rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-slate-50 shadow-sm hover:shadow-md hover:border-brand-secondary/40 transition-all duration-200">
     {/* Accent bar left side */}
@@ -369,6 +467,9 @@ const PolicyCard = ({
           </p>
           <p className="mt-1 text-[11px] uppercase tracking-wide text-slate-400 font-medium">
             Policy Document
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Scope: {scopeLabel}
           </p>
         </div>
       </div>

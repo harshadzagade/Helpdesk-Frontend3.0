@@ -27,6 +27,7 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
   const [requesterStaff, setRequesterStaff] = useState(null);
   const [assignedStaff, setAssignedStaff] = useState(null);
   const [allStaff, setAllStaff] = useState([]);
+  const [staffById, setStaffById] = useState({});
   const [behalfStaffDetails, setBehalfStaffDetails] = useState(null);
   const [currentStaff, setCurrentStaff] = useState(null);
   const [targetDeptName, setTargetDeptName] = useState('');
@@ -246,6 +247,30 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
           console.warn('Failed to fetch staff list', err);
           setAllStaff([]);
         }
+
+        const approverIds = [
+          initialRequest.hod1ApprovedById,
+          initialRequest.hod2ApprovedById,
+          initialRequest.rejectedById,
+          initialRequest.assignedById,
+        ].filter(Boolean);
+
+        if (approverIds.length > 0) {
+          const fetchedStaff = await Promise.all(
+            [...new Set(approverIds.map(String))].map(async (id) => {
+              try {
+                const res = await api.get(`/api/staff/${id}`);
+                return [String(id), res.data?.data || res.data || null];
+              } catch (err) {
+                console.warn(`Failed to fetch staff ${id}`, err);
+                return [String(id), null];
+              }
+            })
+          );
+          setStaffById(Object.fromEntries(fetchedStaff.filter(([, value]) => value)));
+        } else {
+          setStaffById({});
+        }
       } catch (err) {
         console.error('Error in RequestDetails fetchData', err);
       } finally {
@@ -307,19 +332,38 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
     : 'Requester Department';
   const targetDeptLabel = targetDeptName || (request?.departmentId ? `Department ID: ${request.departmentId}` : 'Target Department');
 
+  const isHod1AutoApproved =
+    request?.hod1Approval &&
+    !request?.hod1ApprovedById &&
+    /auto-approved/i.test(String(request?.hod1Comment || ''));
+
   const hod1ApprovedByStaff =
-    request?.hod1ApprovedById && Array.isArray(allStaff)
-      ? allStaff.find((s) => String(s.id) === String(request.hod1ApprovedById))
-      : null;
+    request?.hod1ApprovedById
+      ? staffById[String(request.hod1ApprovedById)] ||
+        (Array.isArray(allStaff)
+          ? allStaff.find((s) => String(s.id) === String(request.hod1ApprovedById))
+          : null) ||
+        (String(currentStaff?.id) === String(request.hod1ApprovedById) ? currentStaff : null)
+      : isHod1AutoApproved
+        ? { firstname: 'System', middlename: 'Auto', lastname: 'Approval', role: 'Auto' }
+        : null;
 
   const hod2ApprovedByStaff =
-    request?.hod2ApprovedById && Array.isArray(allStaff)
-      ? allStaff.find((s) => String(s.id) === String(request.hod2ApprovedById))
+    request?.hod2ApprovedById
+      ? staffById[String(request.hod2ApprovedById)] ||
+        (Array.isArray(allStaff)
+          ? allStaff.find((s) => String(s.id) === String(request.hod2ApprovedById))
+          : null) ||
+        (String(currentStaff?.id) === String(request.hod2ApprovedById) ? currentStaff : null)
       : null;
 
   const rejectedByStaff =
-    request?.rejectedById && Array.isArray(allStaff)
-      ? allStaff.find((s) => String(s.id) === String(request.rejectedById))
+    request?.rejectedById
+      ? staffById[String(request.rejectedById)] ||
+        (Array.isArray(allStaff)
+          ? allStaff.find((s) => String(s.id) === String(request.rejectedById))
+          : null) ||
+        (String(currentStaff?.id) === String(request.rejectedById) ? currentStaff : null)
       : null;
 
   // --- ACTIONS ---
