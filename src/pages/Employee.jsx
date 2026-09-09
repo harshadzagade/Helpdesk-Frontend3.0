@@ -375,6 +375,14 @@ const Employee = () => {
     return targetDeptIds.includes(activeDeptId);
   };
 
+  const getRoleChangeDepartmentId = (row) => {
+    const targetDeptIds = normalizeIntArray(row?.departmentIds);
+    if (isAdmin && activeDeptId != null && targetDeptIds.includes(activeDeptId)) {
+      return activeDeptId;
+    }
+    return targetDeptIds[0] || activeDeptId || null;
+  };
+
   const onUpdateExtension = async (row) => {
     if (!canEditExtension) {
       Swal.fire({ icon: 'warning', title: 'Not allowed', text: 'You do not have permission to update extension numbers.' });
@@ -422,6 +430,48 @@ const Employee = () => {
     } catch (e) {
       const msg = e?.response?.data?.message || 'Extension update failed';
       Swal.fire({ icon: 'error', title: 'Update Failed', text: msg });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onResetPassword = async (row) => {
+    if (!isSuperadmin) return;
+
+    const fullName = toStr(row.fullName) || `${toStr(row.firstname)} ${toStr(row.lastname)}`.trim() || toStr(row.email);
+    const confirm = await Swal.fire({
+      icon: 'warning',
+      title: `Reset password for ${fullName}?`,
+      text: 'The user will receive a temporary password and must set a new password on next login.',
+      showCancelButton: true,
+      confirmButtonText: 'Reset Password',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      setLoading(true);
+      Swal.fire({ title: 'Resetting password...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+      const res = await api.patch(`/api/staff/${row.id}/reset-password`);
+      const temporaryPassword = res.data?.temporaryPassword;
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Password Reset',
+        html: `
+          <div style="text-align:left">
+            <p>The user must login with the temporary password and create a new password.</p>
+            ${temporaryPassword ? `<p><strong>Temporary Password:</strong> ${temporaryPassword}</p>` : ''}
+          </div>
+        `,
+      });
+      fetchStaff();
+    } catch (e) {
+      const msg = e?.response?.data?.message || 'Password reset failed';
+      Swal.fire({ icon: 'error', title: 'Reset Password Failed', text: msg });
     } finally {
       setLoading(false);
     }
@@ -546,7 +596,12 @@ const Employee = () => {
       Swal.fire({ title: 'Updating role…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
       // ✅ NEW endpoint
-      await api.patch(`/api/staff/role/${row.id}`, { role: selectedRole });
+      const roleChangeDepartmentId = getRoleChangeDepartmentId(row);
+      const config = roleChangeDepartmentId
+        ? { headers: { 'x-department-id': String(roleChangeDepartmentId) } }
+        : undefined;
+
+      await api.patch(`/api/staff/role/${row.id}`, { role: selectedRole }, config);
 
       await Swal.fire({ icon: 'success', title: 'Updated', text: 'Role updated successfully.' });
       fetchStaff();
@@ -765,6 +820,12 @@ const Employee = () => {
         label: 'Permissions',
         onClick: onManagePermissions,
         className: 'bg-amber-700 hover:bg-amber-600',
+        disabled: (row) => isSuper(row.role),
+      });
+      list.push({
+        label: 'Reset Password',
+        onClick: onResetPassword,
+        className: 'bg-slate-700 hover:bg-slate-600',
         disabled: (row) => isSuper(row.role),
       });
     }
