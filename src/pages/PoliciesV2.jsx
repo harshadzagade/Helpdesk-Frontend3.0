@@ -13,6 +13,11 @@ const roleOptions = [
   { value: 'user', label: 'User' },
 ];
 
+const scopeOptions = [
+  { value: 'all', label: 'All Departments' },
+  { value: 'selected', label: 'Selected Departments' },
+];
+
 const buildAttachmentUrl = (fileUrl) => {
   if (!fileUrl) return '';
   if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
@@ -31,9 +36,12 @@ export default function PoliciesV2() {
   const [isFormVisible, setIsFormVisible] = React.useState(false);
   const [policyName, setPolicyName] = React.useState('');
   const [selectedRoles, setSelectedRoles] = React.useState([]);
+  const [policyScope, setPolicyScope] = React.useState(scopeOptions[0]);
+  const [selectedDepartments, setSelectedDepartments] = React.useState([]);
   const [file, setFile] = React.useState(null);
   const [editingPolicyId, setEditingPolicyId] = React.useState(null);
   const [policies, setPolicies] = React.useState([]);
+  const [departments, setDepartments] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -42,6 +50,20 @@ export default function PoliciesV2() {
     user?.role === 'superadmin' ||
     canManagePolicies ||
     user?.canManagePolicies;
+
+  const departmentOptions = React.useMemo(
+    () => (departments || []).map((dept) => ({
+      value: Number(dept.id),
+      label: dept.department || dept.name || `Department ${dept.id}`,
+    })),
+    [departments]
+  );
+
+  const departmentNameById = React.useMemo(() => {
+    const map = new Map();
+    departmentOptions.forEach((dept) => map.set(Number(dept.value), dept.label));
+    return map;
+  }, [departmentOptions]);
 
   const fetchPolicies = async () => {
     try {
@@ -61,9 +83,28 @@ export default function PoliciesV2() {
     fetchPolicies();
   }, []);
 
+  React.useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await api.get('/api/departments');
+        const list = Array.isArray(res.data)
+          ? res.data
+          : res.data?.data || res.data?.departments || [];
+        setDepartments(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error('Failed to fetch departments', err);
+        setDepartments([]);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
+
   const resetForm = () => {
     setPolicyName('');
     setSelectedRoles([]);
+    setPolicyScope(scopeOptions[0]);
+    setSelectedDepartments([]);
     setFile(null);
     setEditingPolicyId(null);
   };
@@ -95,14 +136,24 @@ export default function PoliciesV2() {
       alert('Please select at least one role');
       return;
     }
+    if (policyScope.value === 'selected' && !selectedDepartments.length) {
+      alert('Please select at least one department or choose All Departments');
+      return;
+    }
 
     try {
       setSubmitting(true);
       setError('');
 
+      const departmentIds =
+        policyScope.value === 'selected'
+          ? selectedDepartments.map((dept) => dept.value).filter((id) => Number.isInteger(Number(id)))
+          : [];
+
       const formData = new FormData();
       formData.append('policyName', policyName.trim());
       formData.append('assignRole', JSON.stringify(selectedRoles.map((role) => role.value)));
+      formData.append('departmentIds', JSON.stringify(departmentIds));
       if (file) formData.append('attachment', file);
 
       if (editingPolicyId) {
@@ -145,6 +196,17 @@ export default function PoliciesV2() {
           )
         : []
     );
+    const mappedDepartments = Array.isArray(policy.departmentIds)
+      ? policy.departmentIds
+          .map((id) => departmentOptions.find((opt) => Number(opt.value) === Number(id)) || {
+            value: Number(id),
+            label: departmentNameById.get(Number(id)) || `Department ${id}`,
+          })
+          .filter((dept) => Number.isInteger(Number(dept.value)))
+      : [];
+
+    setPolicyScope(mappedDepartments.length ? scopeOptions[1] : scopeOptions[0]);
+    setSelectedDepartments(mappedDepartments);
     setFile(null);
   };
 
@@ -251,6 +313,37 @@ export default function PoliciesV2() {
             </div>
 
             <div className="flex flex-col">
+              <label className="block text-sm font-bold text-gray-700 mb-1">Policy Scope</label>
+              <Select
+                options={scopeOptions}
+                value={policyScope}
+                onChange={(option) => {
+                  const nextScope = option || scopeOptions[0];
+                  setPolicyScope(nextScope);
+                  if (nextScope.value === 'all') setSelectedDepartments([]);
+                }}
+                placeholder="Select scope"
+                className="w-full text-sm"
+              />
+            </div>
+
+            {policyScope.value === 'selected' && (
+              <div className="flex flex-col md:col-span-2">
+                <label className="block text-sm font-bold text-gray-700 mb-1">
+                  Select Department(s)
+                </label>
+                <Select
+                  options={departmentOptions}
+                  value={selectedDepartments}
+                  onChange={(options) => setSelectedDepartments(options || [])}
+                  placeholder="Select department(s)"
+                  className="w-full text-sm"
+                  isMulti
+                />
+              </div>
+            )}
+
+            <div className="flex flex-col">
               <label htmlFor="policyFile" className="block text-sm font-bold text-gray-700">
                 Policy Document{' '}
                 {editingPolicyId && (
@@ -302,6 +395,11 @@ export default function PoliciesV2() {
               onDelete={() => handleDelete(policy.id)}
               onEdit={() => handleEdit(policy)}
               canManage={canManage}
+              scopeLabel={
+                Array.isArray(policy.departmentIds) && policy.departmentIds.length
+                  ? policy.departmentIds.map((id) => departmentNameById.get(Number(id)) || `Department ${id}`).join(', ')
+                  : 'All Departments'
+              }
             />
           ))}
           {!policies.length && (
@@ -313,7 +411,7 @@ export default function PoliciesV2() {
   );
 }
 
-function PolicyCard({ name, fileUrl, onPreview, onDownload, onDelete, onEdit, canManage }) {
+function PolicyCard({ name, fileUrl, onPreview, onDownload, onDelete, onEdit, canManage, scopeLabel }) {
   return (
     <div className="group relative flex flex-col p-4 rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-slate-50 shadow-sm hover:shadow-md hover:border-brand-secondary/40 transition-all duration-200">
       <span className="absolute inset-y-3 left-0 w-1 rounded-full bg-brand-secondary/60 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -327,6 +425,9 @@ function PolicyCard({ name, fileUrl, onPreview, onDownload, onDelete, onEdit, ca
             <p className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2">{name}</p>
             <p className="mt-1 text-[11px] uppercase tracking-wide text-slate-400 font-medium">
               Policy Document
+            </p>
+            <p className="mt-1 text-xs text-slate-500 line-clamp-1">
+              {scopeLabel}
             </p>
           </div>
         </div>
