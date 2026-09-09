@@ -19,6 +19,13 @@ const buildAttachmentUrl = (fileUrl) => {
   return `${BASE_URL}${fileUrl}`;
 };
 
+const isPdfFile = (candidate) => {
+  if (!candidate) return true;
+  const fileName = String(candidate.name || '').toLowerCase();
+  const fileType = String(candidate.type || '').toLowerCase();
+  return fileType === 'application/pdf' || fileName.endsWith('.pdf');
+};
+
 export default function PoliciesV2() {
   const { user, canManagePolicies } = useAuth();
   const [isFormVisible, setIsFormVisible] = React.useState(false);
@@ -59,6 +66,17 @@ export default function PoliciesV2() {
     setSelectedRoles([]);
     setFile(null);
     setEditingPolicyId(null);
+  };
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files?.[0] || null;
+    if (selectedFile && !isPdfFile(selectedFile)) {
+      alert('Only PDF files are allowed for policies.');
+      e.target.value = '';
+      setFile(null);
+      return;
+    }
+    setFile(selectedFile);
   };
 
   const fetchPolicyById = async (policyId) => {
@@ -243,8 +261,9 @@ export default function PoliciesV2() {
                 id="policyFile"
                 name="policyFile"
                 type="file"
+                accept="application/pdf,.pdf"
                 className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-400 file:border-0 file:bg-transparent file:text-gray-600 file:text-sm file:font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                onChange={(e) => setFile(e.target.files[0] || null)}
+                onChange={handleFileChange}
               />
             </div>
 

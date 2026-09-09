@@ -104,8 +104,8 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
     const status = normalizeStatus(statusRaw);
     const badges = {
       pending: { class: 'bg-yellow-500 text-yellow-900', text: 'Pending' },
-      'hod1-approved': { class: 'bg-indigo-500 text-white', text: 'HOD1 Approved' },
-      'hod2-approved': { class: 'bg-purple-500 text-white', text: 'HOD2 Approved' },
+      'hod1-approved': { class: 'bg-indigo-500 text-white', text: 'Requester Dept Approved' },
+      'hod2-approved': { class: 'bg-purple-500 text-white', text: 'Target Dept Approved' },
       'in-progress': { class: 'bg-blue-500 text-white', text: 'In Progress' },
       closed: { class: 'bg-gray-600 text-white', text: 'Closed' },
       rejected: { class: 'bg-red-600 text-white', text: 'Rejected' },
@@ -127,6 +127,11 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
     return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
   };
 
+  const friendlyApprovalMessage = (message) =>
+    String(message || '')
+      .replaceAll('HOD1', 'requester department approver')
+      .replaceAll('HOD2', 'target department approver')
+      .replaceAll('HOD', 'approver');
 
   const getFullUrl = (p) => {
     if (!p) return null;
@@ -378,14 +383,14 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
         comment: hod1Comment,
       });
 
-      await Swal.fire('Success', res.data?.message || 'HOD1 approved', 'success');
+      await Swal.fire('Success', 'Request approved successfully.', 'success');
       const updated = res.data?.data || null;
       if (updated) setRequest(updated);
 
       setShowHod1Modal(false);
       setHod1Comment('');
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to approve as HOD1.';
+      const msg = friendlyApprovalMessage(err.response?.data?.message || err.message || 'Failed to approve request.');
       Swal.fire('Error', msg, 'error');
     } finally {
       setUpdating(false);
@@ -405,7 +410,7 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
         assignStaffId: hod2AssignStaffId,
       });
 
-      await Swal.fire('Success', res.data?.message || 'HOD2 approved', 'success');
+      await Swal.fire('Success', 'Request approved and assigned successfully.', 'success');
       const updated = res.data?.data || null;
       if (updated) setRequest(updated);
 
@@ -413,7 +418,7 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
       setHod2Comment('');
       setHod2AssignStaffId('');
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to approve as HOD2.';
+      const msg = friendlyApprovalMessage(err.response?.data?.message || err.message || 'Failed to approve and assign request.');
       Swal.fire('Error', msg, 'error');
     } finally {
       setUpdating(false);
@@ -497,7 +502,11 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
     if (!request?.id) return Swal.fire('Error', 'Invalid request ID', 'error');
     if (!rejectComment.trim()) return Swal.fire('Error', 'Please enter rejection reason/comment.', 'error');
 
-    const levelLabel = isHod1Phase ? 'HOD1' : isHod2Phase ? 'HOD2' : 'HOD';
+    const levelLabel = isHod1Phase
+      ? 'requester department approver'
+      : isHod2Phase
+        ? 'target department approver'
+        : 'approver';
 
     const confirm = await Swal.fire({
       title: `Reject as ${levelLabel}?`,
@@ -517,14 +526,14 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
         comment: rejectComment,
       });
 
-      await Swal.fire('Success', res.data?.message || 'Rejected', 'success');
+      await Swal.fire('Success', friendlyApprovalMessage(res.data?.message || 'Rejected'), 'success');
       const updated = res.data?.data || null;
       if (updated) setRequest(updated);
 
       setShowRejectModal(false);
       setRejectComment('');
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to reject request.';
+      const msg = friendlyApprovalMessage(err.response?.data?.message || err.message || 'Failed to reject request.');
       Swal.fire('Error', msg, 'error');
     } finally {
       setUpdating(false);
@@ -747,13 +756,13 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
         {request.hod1Approval && (
           <section className="mb-10">
             <h2 className="text-lg font-bold text-gray-900 mb-4 border-l-4 border-green-700 pl-4">
-              HOD1 Approval - Requester Department ({hod1DeptLabel})
+              Requester Department Approval ({hod1DeptLabel})
             </h2>
 
             <table className="w-full border border-green-300 table-auto text-sm">
               <tbody className="divide-y divide-green-200">
                 <tr className="bg-green-50">
-                  <td className="px-5 py-3 text-gray-700">HOD Department</td>
+                  <td className="px-5 py-3 text-gray-700">Department</td>
                   <td className="px-5 py-3 text-gray-900">{hod1DeptLabel}</td>
                 </tr>
 
@@ -784,13 +793,13 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
         {request.hod2Approval && (
           <section className="mb-10">
             <h2 className="text-lg font-bold text-gray-900 mb-4 border-l-4 border-green-700 pl-4">
-              HOD2 Approval - Target Department ({hod2DeptLabel})
+              Target Department Approval ({hod2DeptLabel})
             </h2>
 
             <table className="w-full border border-green-300 table-auto text-sm">
               <tbody className="divide-y divide-green-200">
                 <tr className="bg-green-50">
-                  <td className="px-5 py-3 text-gray-700">HOD Department</td>
+                  <td className="px-5 py-3 text-gray-700">Department</td>
                   <td className="px-5 py-3 text-gray-900">{hod2DeptLabel}</td>
                 </tr>
 
@@ -1089,11 +1098,11 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
       {request.hod1Approval && (
         <div className="mb-4">
           <label className="font-medium text-gray-700 block mb-2">
-            HOD1 Approval - Requester Department ({requesterDeptLabel}):
+            Requester Department Approval ({requesterDeptLabel}):
           </label>
           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-gray-800">
             <p className="text-xs font-semibold text-indigo-700 mb-1">
-              HOD1 is the HOD/Admin of the request raised by user's department.
+              Approval from the department where the request was raised.
             </p>
             <p className="font-semibold">
               Approved By: {hod1ApprovedByStaff ? getFullName(hod1ApprovedByStaff) : 'N/A'}
@@ -1114,11 +1123,11 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
       {request.hod2Approval && (
         <div className="mb-4">
           <label className="font-medium text-gray-700 block mb-2">
-            HOD2 Approval - Target Department ({targetDeptLabel}):
+            Target Department Approval ({targetDeptLabel}):
           </label>
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-gray-800">
             <p className="text-xs font-semibold text-purple-700 mb-1">
-              HOD2 is the HOD/Admin of the department where this request is sent.
+              Approval from the department where this request is sent.
             </p>
             <p className="font-semibold">
               Approved By: {hod2ApprovedByStaff ? getFullName(hod2ApprovedByStaff) : 'N/A'}
@@ -1214,7 +1223,7 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
             disabled={updating}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium transition-colors disabled:opacity-50"
           >
-            {updating ? 'Processing...' : 'HOD1 Approve'}
+            {updating ? 'Processing...' : 'Approve Request'}
           </button>
         )}
 
@@ -1224,7 +1233,7 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
             disabled={updating}
             className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50"
           >
-            {updating ? 'Processing...' : 'HOD2 Approve & Assign'}
+            {updating ? 'Processing...' : 'Approve & Assign'}
           </button>
         )}
 
@@ -1266,11 +1275,11 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
         </button>
       </div>
 
-      {/* HOD1 Modal */}
+      {/* Requester department approval modal */}
       {showHod1Modal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-1">HOD1 Approval</h2>
+            <h2 className="text-xl font-bold mb-1">Requester Department Approval</h2>
             <p className="mb-4 text-sm text-gray-600">
               Requester Department: {requesterDeptLabel}
             </p>
@@ -1312,11 +1321,11 @@ const RequestDetails = ({ request: initialRequest, onClose }) => {
         </div>
       )}
 
-      {/* HOD2 Modal */}
+      {/* Target department approval modal */}
       {showHod2Modal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-1">HOD2 Approval & Assign</h2>
+            <h2 className="text-xl font-bold mb-1">Target Department Approval & Assign</h2>
             <p className="mb-4 text-sm text-gray-600">
               Target Department: {targetDeptLabel}
             </p>

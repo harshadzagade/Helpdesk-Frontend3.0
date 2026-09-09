@@ -262,8 +262,16 @@ const Request = () => {
     }
 
     // 👇 DepartmentName.HOD Approved type status
+    if (s === "hod1-approved") {
+      return <span className={`${base} bg-indigo-100 text-indigo-700`}>Requester Dept Approved</span>;
+    }
+
+    if (s === "hod2-approved") {
+      return <span className={`${base} bg-purple-100 text-purple-700`}>Target Dept Approved</span>;
+    }
+
     if (s.includes("hod")) {
-      return <span className={`${base} bg-purple-100 text-purple-700`}>{status}</span>;
+      return <span className={`${base} bg-purple-100 text-purple-700`}>Approved</span>;
     }
 
     return <span className={`${base} bg-gray-100 text-gray-700`}>{status}</span>;

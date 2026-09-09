@@ -398,37 +398,42 @@ const Employee = () => {
     }
 
     const currentValue = toStr(row.contactExtension);
-    const { value: nextExtension } = await Swal.fire({
+    const result = await Swal.fire({
       title: `Update Extension: ${toStr(row.fullName)}`,
       input: 'text',
       inputValue: currentValue,
       inputLabel: 'Extension Number',
-      inputPlaceholder: 'Enter extension number',
+      inputPlaceholder: 'Enter extension number, or leave blank to clear',
       showCancelButton: true,
       confirmButtonText: 'Update',
       cancelButtonText: 'Cancel',
       reverseButtons: true,
       inputValidator: (value) => {
         const normalized = toStr(value).trim();
-        if (!normalized) return 'Please enter an extension number';
+        if (!normalized) return undefined;
         if (!/^\d+$/.test(normalized)) return 'Extension should contain only digits';
         return undefined;
       },
     });
 
-    if (!nextExtension) return;
+    if (!result.isConfirmed) return;
+    const nextExtension = toStr(result.value).trim();
 
     try {
       setLoading(true);
       Swal.fire({ title: 'Updating extension…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
       await api.patch(`/api/staff/${row.id}/contact-extension`, {
-        contactExtension: toStr(nextExtension).trim(),
+        contactExtension: nextExtension,
       });
-      await Swal.fire({ icon: 'success', title: 'Updated', text: 'Extension number updated successfully.' });
+      await Swal.fire({
+        icon: 'success',
+        title: 'Updated',
+        text: nextExtension ? 'Extension number updated successfully.' : 'Extension number cleared successfully.',
+      });
       fetchStaff();
       setSelectedEmployee((prev) => (
         prev && prev.id === row.id
-          ? { ...prev, contactExtension: toStr(nextExtension).trim() }
+          ? { ...prev, contactExtension: nextExtension || null }
           : prev
       ));
     } catch (e) {

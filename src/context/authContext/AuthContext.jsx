@@ -239,7 +239,15 @@ export function AuthProvider({ children }) {
 
   // ✅ Department switch
   const switchDepartment = useCallback((deptId) => {
-    setActiveDepartmentId(deptId ? String(deptId) : null);
+    const nextDeptId = deptId ? String(deptId) : null;
+    setActiveDepartmentId(nextDeptId);
+
+    if (nextDeptId) localStorage.setItem("auth.activeDepartmentId", nextDeptId);
+    else localStorage.removeItem("auth.activeDepartmentId");
+
+    window.dispatchEvent(new CustomEvent("auth:activeDepartmentChanged", {
+      detail: { departmentId: nextDeptId },
+    }));
   }, []);
 
   const value = useMemo(

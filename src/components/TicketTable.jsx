@@ -9,8 +9,16 @@ const badge = (status = "") => {
   if (s.includes("closed")) return "bg-green-50 text-green-700";
   if (s.includes("progress")) return "bg-yellow-50 text-yellow-700";
   if (s.includes("hod1")) return "bg-indigo-50 text-indigo-700";
+  if (s.includes("hod2")) return "bg-purple-50 text-purple-700";
   if (s.includes("reject")) return "bg-red-50 text-red-700";
   return "bg-gray-50 text-gray-700";
+};
+
+const displayStatus = (status = "") => {
+  const s = String(status).toLowerCase().replace(/[_\s]+/g, "-");
+  if (s === "hod1-approved") return "Requester Dept Approved";
+  if (s === "hod2-approved") return "Target Dept Approved";
+  return status || "-";
 };
 
 const msToAge = (ms) => {
@@ -29,6 +37,7 @@ export default function TicketTable({
   title = "Pending / In-Progress Tickets",
   filterActiveOnly = true, // ✅ default: show only pending + inprogress
   onRowClick,
+  headerActions,
 }) {
   const now = useMemo(() => Date.now(), []);
 
@@ -82,9 +91,12 @@ export default function TicketTable({
 
   return (
     <div className="rounded-2xl bg-white shadow border border-gray-100 overflow-hidden">
-      <div className="p-4 border-b border-gray-100">
-        <h3 className="font-semibold">{title}</h3>
-        <p className="text-xs text-gray-500 mt-1">Age is calculated from Created time.</p>
+      <div className="flex flex-col gap-3 p-4 border-b border-gray-100 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h3 className="font-semibold">{title}</h3>
+          <p className="text-xs text-gray-500 mt-1">Age is calculated from Created time.</p>
+        </div>
+        {headerActions}
       </div>
 
       <div className="overflow-auto">
@@ -125,7 +137,7 @@ export default function TicketTable({
                     <td className="px-4 py-3">{r.priority || "-"}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badge(r.status)}`}>
-                        {r.status}
+                        {displayStatus(r.status)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
