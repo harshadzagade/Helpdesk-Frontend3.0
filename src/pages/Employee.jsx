@@ -57,7 +57,7 @@ const Employee = () => {
   const canManage = isSuperadmin; // only superadmin can create/update/delete
   const canChangeRole = isAdmin || isSuperadmin; // both can change role, but admins have restrictions in onChangeRole handler
   const canEditExtension = isSuperadmin || canManageExtensions;
-  const canUseEmployeeActions = isSuperadmin;
+  const canUseEmployeeActions = isSuperadmin || canEditExtension;
 
   const activeDeptId = activeDepartmentId != null ? Number(activeDepartmentId) : null;
   const formRoleOptions = ROLE_OPTIONS;
@@ -169,7 +169,7 @@ const Employee = () => {
     try {
       const endpoints =
         viewMode === 'archived'
-          ? ['/api/staffArchive/archiveStaff', '/api/staffArchive/archivedStaff', '/api/staffArchive']
+          ? ['/api/staff/archiveStaff', '/api/staffArchive/archiveStaff', '/api/staffArchive/archived-staff', '/api/staff/archived-staff']
           : ['/api/staff'];
 
       let res = null;
@@ -780,7 +780,7 @@ const Employee = () => {
     const list = [];
 
     // ✅ Admin + Superadmin: role change (active view only)
-    if (canChangeRole && (viewMode === 'myDepartment' || (isSuperadmin && viewMode === 'active'))) {
+    if (isSuperadmin && canChangeRole && viewMode === 'active') {
       list.push({
         label: 'Change Role',
         onClick: onChangeRole,
