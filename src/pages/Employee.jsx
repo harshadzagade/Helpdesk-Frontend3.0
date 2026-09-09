@@ -317,6 +317,7 @@ const Employee = () => {
 
   // columns
   const columns = [
+    { key: 'id', label: 'ID' },
     { key: 'fullName', label: 'Full Name' },
     { key: 'email', label: 'Email' },
     {

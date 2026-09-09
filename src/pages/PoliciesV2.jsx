@@ -6,12 +6,7 @@ import api, { BASE_URL } from '../lib/api';
 import { useAuth } from '../context/authContext/AuthContext';
 import PDFimg from '../assets/pdfimg.jpg';
 
-const roleOptions = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'subadmin', label: 'Subadmin' },
-  { value: 'engineer', label: 'Engineer' },
-  { value: 'user', label: 'User' },
-];
+const defaultPolicyRoles = ['admin', 'subadmin', 'engineer', 'user'];
 
 const scopeOptions = [
   { value: 'all', label: 'All Departments' },
@@ -35,7 +30,6 @@ export default function PoliciesV2() {
   const { user, canManagePolicies } = useAuth();
   const [isFormVisible, setIsFormVisible] = React.useState(false);
   const [policyName, setPolicyName] = React.useState('');
-  const [selectedRoles, setSelectedRoles] = React.useState([]);
   const [policyScope, setPolicyScope] = React.useState(scopeOptions[0]);
   const [selectedDepartments, setSelectedDepartments] = React.useState([]);
   const [file, setFile] = React.useState(null);
@@ -102,7 +96,6 @@ export default function PoliciesV2() {
 
   const resetForm = () => {
     setPolicyName('');
-    setSelectedRoles([]);
     setPolicyScope(scopeOptions[0]);
     setSelectedDepartments([]);
     setFile(null);
@@ -132,10 +125,6 @@ export default function PoliciesV2() {
       alert('Please enter policy name');
       return;
     }
-    if (!selectedRoles.length) {
-      alert('Please select at least one role');
-      return;
-    }
     if (policyScope.value === 'selected' && !selectedDepartments.length) {
       alert('Please select at least one department or choose All Departments');
       return;
@@ -152,7 +141,7 @@ export default function PoliciesV2() {
 
       const formData = new FormData();
       formData.append('policyName', policyName.trim());
-      formData.append('assignRole', JSON.stringify(selectedRoles.map((role) => role.value)));
+      formData.append('assignRole', JSON.stringify(defaultPolicyRoles));
       formData.append('departmentIds', JSON.stringify(departmentIds));
       if (file) formData.append('attachment', file);
 
@@ -189,13 +178,6 @@ export default function PoliciesV2() {
     setIsFormVisible(true);
     setEditingPolicyId(policy.id);
     setPolicyName(policy.policyName || '');
-    setSelectedRoles(
-      Array.isArray(policy.assignRole)
-        ? policy.assignRole.map(
-            (role) => roleOptions.find((opt) => opt.value === role) || { value: role, label: role }
-          )
-        : []
-    );
     const mappedDepartments = Array.isArray(policy.departmentIds)
       ? policy.departmentIds
           .map((id) => departmentOptions.find((opt) => Number(opt.value) === Number(id)) || {
@@ -299,18 +281,6 @@ export default function PoliciesV2() {
               value={policyName}
               onChange={(e) => setPolicyName(e.target.value)}
             />
-
-            <div className="flex flex-col">
-              <label className="block text-sm font-bold text-gray-700 mb-1">Select Role</label>
-              <Select
-                options={roleOptions}
-                value={selectedRoles}
-                onChange={(options) => setSelectedRoles(options || [])}
-                placeholder="Select Role"
-                className="w-full text-sm"
-                isMulti
-              />
-            </div>
 
             <div className="flex flex-col">
               <label className="block text-sm font-bold text-gray-700 mb-1">Policy Scope</label>
