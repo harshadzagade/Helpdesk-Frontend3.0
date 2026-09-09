@@ -37,21 +37,15 @@ export default function EmployeeDetailsV2({ employee = {}, onClose }) {
       : toStr(employee.name);
 
   const email = toStr(employee.email);
-  const institute =
-    toStr(employee.instituteName) ||
-    (employee.instituteId != null ? `Institute #${employee.instituteId}` : '');
   const departments =
     toArr(employee.departmentNames).length
       ? toArr(employee.departmentNames)
       : (toArr(employee.departmentIds).length
           ? toArr(employee.departmentIds).map((id) => `Dept #${id}`)
           : []);
-  const employeeType = toStr(employee.employeeType);
   const role = toStr(employee.role);
   const contactNo = toStr(employee.phoneNumber || employee.contactNo);
   const extension = toStr(employee.contactExtension || employee.extension);
-  const extensionAccess = !!(employee.canManageExtensions || employee.canUpdateExtensions);
-  const policyAccess = !!(employee.canManagePolicies || employee.canUploadPolicies);
 
   return (
     <div className="p-4 border bg-white border-gray-300 rounded shadow mb-4 relative">
@@ -64,7 +58,7 @@ export default function EmployeeDetailsV2({ employee = {}, onClose }) {
           <div className="min-w-0 flex-1">
             <h2 className="text-2xl md:text-3xl font-bold truncate">{fullName || 'Unknown User'}</h2>
             <p className="text-sm md:text-base opacity-90">
-              {role || '-'}{institute ? ` at ${institute}` : ''}
+              {role || '-'}
             </p>
           </div>
 
@@ -121,11 +115,6 @@ export default function EmployeeDetailsV2({ employee = {}, onClose }) {
         <div className="space-y-4">
           <h3 className="text-xl font-semibold text-gray-800 border-b pb-2">Professional Information</h3>
 
-          <div className="flex items-center space-x-2">
-            <span className="w-32 text-sm font-medium text-gray-600">Institute:</span>
-            <span className="text-gray-900">{institute || '-'}</span>
-          </div>
-
           <div className="flex items-start space-x-2">
             <span className="w-32 text-sm font-medium text-gray-600">Department(s):</span>
             <div className="flex flex-wrap gap-2">
@@ -140,28 +129,9 @@ export default function EmployeeDetailsV2({ employee = {}, onClose }) {
           </div>
 
           <div className="flex items-center space-x-2">
-            <span className="w-32 text-sm font-medium text-gray-600">Employee Type:</span>
-            <span className="text-gray-900">{employeeType || '-'}</span>
-          </div>
-
-          <div className="flex items-center space-x-2">
             <span className="w-32 text-sm font-medium text-gray-600">Role:</span>
             <span className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
               {role || '-'}
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <span className="w-32 text-sm font-medium text-gray-600">Extension Access:</span>
-            <span className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full border ${extensionAccess ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-              {extensionAccess ? 'Allowed' : 'No'}
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <span className="w-32 text-sm font-medium text-gray-600">Policy Access:</span>
-            <span className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full border ${policyAccess ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-              {policyAccess ? 'Allowed' : 'No'}
             </span>
           </div>
         </div>

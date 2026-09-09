@@ -40,11 +40,6 @@ const EmployeeDetails = ({ employee = {}, onClose }) => {
 
   const email = toStr(employee.email);
 
-  // ✅ NEW: instituteName preferred, fallback to instituteId
-  const institute =
-    toStr(employee.instituteName) ||
-    (employee.instituteId != null ? `Institute #${employee.instituteId}` : '');
-
   // ✅ NEW: departmentNames preferred, fallback to departmentIds
   const departments =
     toArr(employee.departmentNames).length
@@ -52,9 +47,6 @@ const EmployeeDetails = ({ employee = {}, onClose }) => {
       : (toArr(employee.departmentIds).length
           ? toArr(employee.departmentIds).map(id => `Dept #${id}`)
           : []);
-
-  // ✅ NEW: employeeType
-  const employeeType = toStr(employee.employeeType);
 
   const role = toStr(employee.role);
   const contactNo = toStr(employee.phoneNumber || employee.contactNo);
@@ -75,7 +67,7 @@ const EmployeeDetails = ({ employee = {}, onClose }) => {
               {fullName || 'Unknown User'}
             </h2>
             <p className="text-sm md:text-base opacity-90">
-              {role || '—'}{institute ? ` at ${institute}` : ''}
+              {role || '—'}
             </p>
           </div>
 
@@ -140,11 +132,6 @@ const EmployeeDetails = ({ employee = {}, onClose }) => {
         <div className="space-y-4">
           <h3 className="text-xl font-semibold text-gray-800 border-b pb-2">Professional Information</h3>
 
-          <div className="flex items-center space-x-2">
-            <span className="w-32 text-sm font-medium text-gray-600">Institute:</span>
-            <span className="text-gray-900">{institute || '—'}</span>
-          </div>
-
           <div className="flex items-start space-x-2">
             <span className="w-32 text-sm font-medium text-gray-600">Department(s):</span>
             <div className="flex flex-wrap gap-2">
@@ -157,11 +144,6 @@ const EmployeeDetails = ({ employee = {}, onClose }) => {
                 : <span className="text-gray-500">—</span>
               }
             </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <span className="w-32 text-sm font-medium text-gray-600">Employee Type:</span>
-            <span className="text-gray-900">{employeeType || '—'}</span>
           </div>
 
           <div className="flex items-center space-x-2">

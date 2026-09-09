@@ -53,11 +53,11 @@ const Employee = () => {
   const isAdmin = hasRole('admin');
   const isSubadmin = hasRole('subadmin');
 
-  const canViewRole = isSuperadmin || isAdmin || isSubadmin;
+  const canViewRole = isSuperadmin;
   const canManage = isSuperadmin; // only superadmin can create/update/delete
   const canChangeRole = isAdmin || isSuperadmin; // both can change role, but admins have restrictions in onChangeRole handler
   const canEditExtension = isSuperadmin || canManageExtensions;
-  const canUseEmployeeActions = canViewRole || canEditExtension;
+  const canUseEmployeeActions = isSuperadmin;
 
   const activeDeptId = activeDepartmentId != null ? Number(activeDepartmentId) : null;
   const formRoleOptions = ROLE_OPTIONS;
@@ -292,12 +292,11 @@ const Employee = () => {
         ? emp.departmentNames
         : [];
 
-      const empInstituteId = toInt(emp.instituteId);
       const empRole = toStr(emp.role).toLowerCase();
       const empEmployeeType = toStr(emp.employeeType);
 
       const matchesFilters =
-        (filters.instituteId == null || empInstituteId === toInt(filters.instituteId)) &&
+        (filters.instituteId == null) &&
         (filters.role === '' || empRole === toStr(filters.role).toLowerCase()) &&
         (filters.departmentId == null || deptIds.includes(toInt(filters.departmentId))) &&
         (filters.employeeType === '' || empEmployeeType === toStr(filters.employeeType));
@@ -308,9 +307,8 @@ const Employee = () => {
       return (
         toStr(emp.fullName).toLowerCase().includes(q) ||
         toStr(emp.email).toLowerCase().includes(q) ||
-        toStr(emp.instituteName).toLowerCase().includes(q) ||
         deptNames.join(', ').toLowerCase().includes(q) ||
-        empRole.includes(q) ||
+        (isSuperadmin && empRole.includes(q)) ||
         toStr(emp.phoneNumber).toLowerCase().includes(q) ||
         toStr(emp.contactExtension).toLowerCase().includes(q)
       );
@@ -319,14 +317,8 @@ const Employee = () => {
 
   // columns
   const columns = [
-    { key: 'id', label: 'ID' },
     { key: 'fullName', label: 'Full Name' },
     { key: 'email', label: 'Email' },
-    {
-      key: 'instituteName',
-      label: 'Institute',
-      format: (_value, row) => toStr(row.instituteName)
-    },
     {
       key: 'departmentNames',
       label: 'Department(s)',
@@ -335,25 +327,6 @@ const Employee = () => {
   ];
 
   if (canViewRole) columns.push({ key: 'role', label: 'Role' });
-
-  if (isSuperadmin) {
-    columns.push(
-      {
-        key: 'canManageExtensions',
-        label: 'Extension Access',
-        format: (_value, row) => (
-          row.canManageExtensions || row.canUpdateExtensions ? 'Allowed' : 'No'
-        ),
-      },
-      {
-        key: 'canManagePolicies',
-        label: 'Policy Access',
-        format: (_value, row) => (
-          row.canManagePolicies || row.canUploadPolicies ? 'Allowed' : 'No'
-        ),
-      },
-    );
-  }
 
   columns.push(
     {
@@ -1000,12 +973,11 @@ const Employee = () => {
         <EmployeeDetails
           employee={selectedEmployee}
           onClose={handleBack}
-          onEdit={viewMode === 'active' ? () => onEdit(selectedEmployee) : undefined}
-          onDelete={viewMode === 'active' ? () => onDelete(selectedEmployee) : undefined}
-          onRecover={viewMode === 'archived' ? () => onRecover(selectedEmployee) : undefined}
-          onPermanentDelete={viewMode === 'archived' ? () => onPermanentDelete(selectedEmployee) : undefined}
+          onEdit={isSuperadmin && viewMode === 'active' ? () => onEdit(selectedEmployee) : undefined}
+          onDelete={isSuperadmin && viewMode === 'active' ? () => onDelete(selectedEmployee) : undefined}
+          onRecover={isSuperadmin && viewMode === 'archived' ? () => onRecover(selectedEmployee) : undefined}
+          onPermanentDelete={isSuperadmin && viewMode === 'archived' ? () => onPermanentDelete(selectedEmployee) : undefined}
           // ✅ new optional action for details page
-          onChangeRole={(isAdmin && viewMode === 'active') ? () => onChangeRole(selectedEmployee) : undefined}
 
         />
       ) : (
@@ -1016,7 +988,7 @@ const Employee = () => {
                 value={searchTerm}
                 onChange={handleSearchChange}
                 onClear={handleClearSearch}
-                placeholder="Search by name, email, institute, department..."
+                placeholder="Search by name, email, department, extension, mobile..."
               />
 
               <button
@@ -1031,27 +1003,18 @@ const Employee = () => {
 
               {isFilterVisible && (
                 <div className="flex flex-wrap gap-3">
-                  <div className="min-w-[220px]">
-                    <Select
-                      name="instituteId"
-                      options={instituteOptions}
-                      value={instituteOptions.find(o => o.value === filters.instituteId) || null}
-                      onChange={(opt) => handleFilterChange(opt, { name: 'instituteId' })}
-                      placeholder="Select Institute"
-                      isClearable
-                    />
-                  </div>
-
-                  <div className="min-w-[180px]">
-                    <Select
-                      name="role"
-                      options={ROLE_OPTIONS}
-                      value={ROLE_OPTIONS.find(o => o.value === filters.role) || null}
-                      onChange={(opt) => handleFilterChange(opt, { name: 'role' })}
-                      placeholder="Select Role"
-                      isClearable
-                    />
-                  </div>
+                  {isSuperadmin && (
+                    <div className="min-w-[180px]">
+                      <Select
+                        name="role"
+                        options={ROLE_OPTIONS}
+                        value={ROLE_OPTIONS.find(o => o.value === filters.role) || null}
+                        onChange={(opt) => handleFilterChange(opt, { name: 'role' })}
+                        placeholder="Select Role"
+                        isClearable
+                      />
+                    </div>
+                  )}
 
                   <div className="min-w-[220px]">
                     <Select
