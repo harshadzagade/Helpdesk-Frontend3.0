@@ -457,14 +457,21 @@ const Employee = () => {
 
       const res = await api.patch(`/api/staff/${row.id}/reset-password`);
       const temporaryPassword = res.data?.temporaryPassword;
+      const mailSent = Boolean(res.data?.mailSent);
+      const mailWarning = res.data?.mailWarning;
 
       await Swal.fire({
-        icon: 'success',
+        icon: mailSent ? 'success' : 'warning',
         title: 'Password Reset',
         html: `
           <div style="text-align:left">
             <p>The user must login with the temporary password and create a new password.</p>
             ${temporaryPassword ? `<p><strong>Temporary Password:</strong> ${temporaryPassword}</p>` : ''}
+            ${
+              mailSent
+                ? '<p style="color:#047857;"><strong>Email sent to user.</strong></p>'
+                : `<p style="color:#b45309;"><strong>Email not sent.</strong> ${mailWarning || 'Please share the temporary password manually.'}</p>`
+            }
           </div>
         `,
       });
