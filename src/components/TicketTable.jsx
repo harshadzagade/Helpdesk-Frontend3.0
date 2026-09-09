@@ -28,6 +28,7 @@ export default function TicketTable({
   rows = [],
   title = "Pending / In-Progress Tickets",
   filterActiveOnly = true, // ✅ default: show only pending + inprogress
+  onRowClick,
 }) {
   const now = useMemo(() => Date.now(), []);
 
@@ -113,9 +114,13 @@ export default function TicketTable({
                 const age = createdMs ? msToAge(now - createdMs) : "-";
 
                 return (
-                  <tr key={`${r.type}-${r.id}`} className="border-t border-gray-100">
+                  <tr
+                    key={`${r.type}-${r.id}`}
+                    className={`border-t border-gray-100 ${onRowClick ? "cursor-pointer hover:bg-gray-50" : ""}`}
+                    onClick={() => onRowClick?.(r)}
+                  >
                     <td className="px-4 py-3 font-semibold text-gray-700">{r.type}</td>
-                    <td className="px-4 py-3">{r.ticketId}</td>
+                    <td className={`px-4 py-3 ${onRowClick ? "font-semibold text-blue-700" : ""}`}>{r.ticketId}</td>
                     <td className="px-4 py-3">{r.subject || "-"}</td>
                     <td className="px-4 py-3">{r.priority || "-"}</td>
                     <td className="px-4 py-3">

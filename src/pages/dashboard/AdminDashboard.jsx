@@ -4,6 +4,7 @@ import StatCard from "../../components/StatCard";
 import DashboardFilterBar from "../../components/DashboardFilterBar";
 import ActivityFeed from "../../components/ActivityFeed";
 import TicketTable from "../../components/TicketTable";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext/AuthContext"; // ✅ adjust path if different
 
 const fmt = (d) => d.toISOString().slice(0, 10);
@@ -26,7 +27,14 @@ const badge = (s = "") => {
   return "bg-gray-50 text-gray-700";
 };
 
-const SimpleList = ({ rows = [] }) => {
+const getTicketPath = (row) => {
+  const type = String(row?.type || "").toLowerCase();
+  if (type === "complaint") return `/complaints/${row.id}`;
+  if (type === "request") return `/requests/${row.id}`;
+  return null;
+};
+
+const SimpleList = ({ rows = [], onOpen }) => {
   if (!rows.length) return <p className="text-sm text-gray-500">No records.</p>;
 
   return (
@@ -42,8 +50,12 @@ const SimpleList = ({ rows = [] }) => {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={`${r.type || "X"}-${r.id}`} className="border-t">
-              <td className="px-3 py-2 font-semibold">{r.ticketId}</td>
+            <tr
+              key={`${r.type || "X"}-${r.id}`}
+              className="border-t hover:bg-gray-50 cursor-pointer"
+              onClick={() => onOpen?.(r)}
+            >
+              <td className="px-3 py-2 font-semibold text-blue-700">{r.ticketId}</td>
               <td className="px-3 py-2">{r.subject}</td>
               <td className="px-3 py-2">
                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badge(r.status)}`}>
@@ -60,6 +72,7 @@ const SimpleList = ({ rows = [] }) => {
 };
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const { departments, activeDepartmentId } = useAuth(); // ✅ from AuthContext
 
   const [range, setRange] = useState(() => {
@@ -109,6 +122,11 @@ export default function AdminDashboard() {
   if (loading) return <div className="p-6">Loading dashboard...</div>;
   if (!data) return <div className="p-6 text-red-600">Failed to load dashboard</div>;
 
+  const openTicket = (row) => {
+    const path = getTicketPath(row);
+    if (path) navigate(path);
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -144,13 +162,13 @@ export default function AdminDashboard() {
       {/* Approval + Unassigned + Activity */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <TableBox title="Approval Pending Requests">
-          <SimpleList rows={data.approvalPendingList || []} />
+          <SimpleList rows={data.approvalPendingList || []} onOpen={openTicket} />
         </TableBox>
 
         {/* ✅ Regular dept => hide Unassigned section */}
         {!isRegularDept && (
-          <TableBox title="Unassigned Tickets (Assign Engineer)">
-            <SimpleList rows={data.unassignedList || []} />
+          <TableBox title="Unassigned Tickets (Assign Staff)">
+            <SimpleList rows={data.unassignedList || []} onOpen={openTicket} />
           </TableBox>
         )}
 
@@ -158,17 +176,17 @@ export default function AdminDashboard() {
       </div>
 
        {/* Recent */}
-       <TicketTable rows={data.recentTickets || []} />
+       <TicketTable rows={data.recentTickets || []} onRowClick={openTicket} />
 
       {/* ✅ Regular dept => hide Engineer Workload */}
       {!isRegularDept && (
-        <TableBox title="Engineer Workload (Active Dept)">
+        <TableBox title="Support Staff Workload (Active Dept)">
           {data.engineerLoad?.length ? (
             <div className="overflow-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50 text-gray-600">
                   <tr>
-                    <th className="text-left px-4 py-3">Engineer</th>
+                    <th className="text-left px-4 py-3">Staff</th>
                     <th className="text-left px-4 py-3">Assigned</th>
                     <th className="text-left px-4 py-3">Pending</th>
                     <th className="text-left px-4 py-3">In Progress</th>
@@ -189,7 +207,7 @@ export default function AdminDashboard() {
               </table>
             </div>
           ) : (
-            <p className="text-sm text-gray-500">No engineers found in this department.</p>
+            <p className="text-sm text-gray-500">No support staff found in this department.</p>
           )}
         </TableBox>
       )}

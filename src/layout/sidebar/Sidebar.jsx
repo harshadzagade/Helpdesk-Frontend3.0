@@ -57,7 +57,7 @@ const Sidebar = () => {
       return userAllowed.has(itemPath);
     }
   
-    // SUBADMIN / ENGINEER: common + reports (NO subadmin activity)
+    // SUBADMIN / ENGINEER: common + reports
     const midAllowed = new Set([
       '/',
       '/employee',
@@ -65,6 +65,7 @@ const Sidebar = () => {
       '/request',
       '/policies',
       '/reports',
+      ...(normalizedRole === 'subadmin' ? ['/subadmin-activity'] : []),
     ]);
     return midAllowed.has(itemPath);
   };

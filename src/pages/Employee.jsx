@@ -51,14 +51,16 @@ const Employee = () => {
 
   const isSuperadmin = hasRole('superadmin');
   const isAdmin = hasRole('admin');
+  const isSubadmin = hasRole('subadmin');
 
-  const canViewRole = isSuperadmin || isAdmin;
+  const canViewRole = isSuperadmin || isAdmin || isSubadmin;
   const canManage = isSuperadmin; // only superadmin can create/update/delete
   const canChangeRole = isAdmin || isSuperadmin; // both can change role, but admins have restrictions in onChangeRole handler
   const canEditExtension = isSuperadmin || canManageExtensions;
   const canUseEmployeeActions = canViewRole || canEditExtension;
 
   const activeDeptId = activeDepartmentId != null ? Number(activeDepartmentId) : null;
+  const formRoleOptions = ROLE_OPTIONS;
 
 
   // ui state
@@ -118,6 +120,8 @@ const Employee = () => {
     });
     setIsEditing(false);
   };
+
+  const canSubmitEmployeeForm = canManage;
 
   // load lists
   const fetchLists = async () => {
@@ -866,11 +870,15 @@ const Employee = () => {
 
   // submit create/update (superadmin only)
   const handleSubmit = async (e) => {
+    e.preventDefault();
     if (viewMode !== 'active') {
       Swal.fire({ icon: 'info', title: 'Not allowed', text: 'Create/Update only in active view.' });
       return;
     }
-    e.preventDefault();
+    if (!canSubmitEmployeeForm) {
+      Swal.fire({ icon: 'warning', title: 'Not allowed', text: 'Only superadmin can create or update employees.' });
+      return;
+    }
     setError('');
 
     const payload = {
@@ -1142,7 +1150,7 @@ const Employee = () => {
                   required
                   value={form.firstname}
                   onChange={(e) => setForm(f => ({ ...f, firstname: e.target.value }))}
-                  disabled={!canManage || loading}
+                  disabled={!canSubmitEmployeeForm || loading}
                 />
 
                 <FormInput
@@ -1151,7 +1159,7 @@ const Employee = () => {
                   type="text"
                   value={form.middlename}
                   onChange={(e) => setForm(f => ({ ...f, middlename: e.target.value }))}
-                  disabled={!canManage || loading}
+                  disabled={!canSubmitEmployeeForm || loading}
                 />
 
                 <FormInput
@@ -1161,7 +1169,7 @@ const Employee = () => {
                   required
                   value={form.lastname}
                   onChange={(e) => setForm(f => ({ ...f, lastname: e.target.value }))}
-                  disabled={!canManage || loading}
+                  disabled={!canSubmitEmployeeForm || loading}
                 />
 
                 <FormInput
@@ -1171,7 +1179,7 @@ const Employee = () => {
                   required
                   value={form.email}
                   onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
-                  disabled={!canManage || loading || isEditing}
+                  disabled={!canSubmitEmployeeForm || loading || isEditing}
                 />
 
                 <div className="flex flex-col">
@@ -1183,7 +1191,7 @@ const Employee = () => {
                     onChange={(opt) => setForm(f => ({ ...f, institute: opt }))}
                     placeholder="Select Institute"
                     isClearable
-                    isDisabled={!canManage || loading}
+                    isDisabled={!canSubmitEmployeeForm || loading}
                   />
                 </div>
 
@@ -1191,12 +1199,12 @@ const Employee = () => {
                   <label className="text-sm font-bold">Role</label>
                   <Select
                     name="role"
-                    options={ROLE_OPTIONS}
+                    options={formRoleOptions}
                     value={form.role}
                     onChange={(opt) => setForm(f => ({ ...f, role: opt }))}
                     placeholder="Select Role"
                     isClearable
-                    isDisabled={!canManage || loading || form._isEditingSuper}
+                    isDisabled={!canSubmitEmployeeForm || loading || form._isEditingSuper}
                   />
                 </div>
 
@@ -1209,7 +1217,7 @@ const Employee = () => {
                     onChange={(opt) => setForm(f => ({ ...f, employeeType: opt }))}
                     placeholder="Select Employee Type"
                     isClearable
-                    isDisabled={!canManage || loading}
+                    isDisabled={!canSubmitEmployeeForm || loading}
                   />
                 </div>
 
@@ -1223,7 +1231,7 @@ const Employee = () => {
                     placeholder="Select Department(s)"
                     isMulti
                     isClearable
-                    isDisabled={!canManage || loading}
+                    isDisabled={!canSubmitEmployeeForm || loading}
                   />
                 </div>
 
@@ -1233,7 +1241,7 @@ const Employee = () => {
                   type="text"
                   value={form.phoneNumber}
                   onChange={(e) => setForm(f => ({ ...f, phoneNumber: e.target.value }))}
-                  disabled={!canManage || loading}
+                  disabled={!canSubmitEmployeeForm || loading}
                 />
 
                 <FormInput
@@ -1242,12 +1250,12 @@ const Employee = () => {
                   type="text"
                   value={form.contactExtension}
                   onChange={(e) => setForm(f => ({ ...f, contactExtension: e.target.value }))}
-                  disabled={!canManage || loading}
+                  disabled={!canSubmitEmployeeForm || loading}
                 />
 
                 {error && <div className="md:col-span-3 text-sm text-red-600 self-center">{error}</div>}
 
-                {canManage && (
+                {canSubmitEmployeeForm && (
                   <button
                     type="submit"
                     disabled={loading}

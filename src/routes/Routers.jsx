@@ -47,7 +47,7 @@ export default function Routers() {
             </Route>
 
             {/* ✅ admin only: Subadmin Activity */}
-            <Route element={<ProtectedRoute roles={['admin']} />}>
+            <Route element={<ProtectedRoute roles={['admin','subadmin']} />}>
               <Route path="/subadmin-activity" element={<SubadminActivity />} />
             </Route>
             
